@@ -5,6 +5,7 @@
   const all = selector => Array.from(document.querySelectorAll(selector));
   const editor = element('editor');
   const consoleReceipt = element('receipt-playback') !== null;
+  const roundKeys = document.body.dataset.keyShape === 'round';
   const soundButtons = all('#sound, [data-sound-toggle]');
   const soundLabels = all('[data-sound-label]');
   const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="pull"]');
@@ -310,7 +311,7 @@
     tone.stop(at + decay);
   }
 
-  function mechanicalSound(kind, at) {
+  function squareKeySound(kind, at) {
     if (kind === 'ratchet') {
       burst(at, .013, 1950, .58);
       knock(at + .004, 278, .024, .22);
@@ -347,12 +348,104 @@
     knock(at + .040, 235 * pitch, .030, .20);
   }
 
-  function playSound(kind) {
-    if (!startAudio()) return;
+  // Each typebar has a slightly different impact and escapement.
+  const typebars = [
+    { body: 321, bite: 6450, ping: 1870, release: .058 },
+    { body: 357, bite: 7310, ping: 2190, release: .077 },
+    { body: 286, bite: 5680, ping: 1590, release: .065 }
+  ];
+  let lastBar = 0;
+  let nextDetent = 0;
+  const carriageTravel = .380;
+  const receiptTravel = .032;
+
+  function ratchetTooth(at, level) {
+    burst(at, .015, 3400, .58 * level);
+    knock(at + .002, 388, .027, .21 * level);
+  }
+
+  function carriageSlide(at, duration) {
+    const source = audio.createBufferSource();
+    source.buffer = noise;
+    const filter = audio.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 1.2;
+    filter.frequency.setValueAtTime(970, at);
+    filter.frequency.exponentialRampToValueAtTime(2830, at + duration * .8);
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(.0001, at);
+    gain.gain.exponentialRampToValueAtTime(.14, at + duration * .18);
+    gain.gain.exponentialRampToValueAtTime(.28, at + duration * .88);
+    gain.gain.exponentialRampToValueAtTime(.0001, at + duration);
+    source.connect(filter).connect(gain).connect(master);
+    source.start(at, Math.random() * .19, duration);
+  }
+
+  function carriageStop(at) {
+    knock(at, 155, .088, .85);
+    burst(at + .002, .043, 3190, 1.30);
+    ring(at + .004, 1570, .078, .20);
+    knock(at + .022, 338, .046, .38);
+    burst(at + .029, .024, 4630, .48);
+  }
+
+  function roundKeySound(kind, at, role) {
+    if (kind === 'return') {
+      let stopAt = at + carriageTravel;
+      if (role === 'lever-release') {
+        // Drag detents have already sounded with the user's hand.
+        stopAt = Math.max(at, nextDetent);
+      } else if (role === 'receipt') {
+        ratchetTooth(at, .7);
+        stopAt = at + receiptTravel;
+      } else {
+        knock(at, 405, .037, .28);
+        burst(at + .003, .018, 5810, .62);
+        carriageSlide(at + .023, .354);
+        for (const offset of [.058, .116, .170, .220, .267, .312, .354]) {
+          ratchetTooth(at + offset, .63);
+        }
+      }
+      carriageStop(stopAt);
+      return stopAt;
+    }
+    if (kind === 'space' || kind === 'delete') {
+      const space = kind === 'space';
+      knock(at, space ? 183 : 291, .054, space ? .53 : .32);
+      burst(at + .004, .025, space ? 2650 : 4480, .88);
+      burst(at + (space ? .062 : .036), .018, space ? 3980 : 2400, .37);
+      return;
+    }
+    lastBar = (lastBar + 1 + Math.floor(Math.random() * (typebars.length - 1))) % typebars.length;
+    const bar = typebars[lastBar];
+    const register = role === 'final' ? .94 : role === 'medial' ? 1.04 : 1;
+    const pitch = register * (.977 + .046 * Math.random());
+    knock(at, bar.body * pitch, .031, .33);
+    burst(at + .003, .023, bar.bite * pitch, 1.56);
+    ring(at + .004, bar.ping * pitch, .038, .17);
+    burst(at + .008, .020, 3050 * pitch, .49);
+    const release = at + bar.release;
+    burst(release, .021, 2740 * pitch, role === 'medial' || role === 'final' ? .25 : .43);
+    knock(release + .001, 227 * pitch, .029, .16);
+  }
+
+  function playSound(kind, role) {
+    if (!startAudio()) {
+      if (!roundKeys || kind !== 'return') return;
+      if (role === 'lever-release') return 0;
+      return (role === 'receipt' ? receiptTravel : carriageTravel) * 1000;
+    }
     const at = audio.currentTime + 0.004;
     if (consoleReceipt) {
-      mechanicalSound(kind, at);
-      return;
+      if (!roundKeys) return squareKeySound(kind, at);
+      const stopAt = roundKeySound(kind, at, role);
+      if (stopAt === undefined) return;
+      // Map the audible stop to the frame clock, including the output device's latency.
+      const output = audio.getOutputTimestamp?.();
+      if (output?.performanceTime > 0 && output.contextTime > 0) {
+        return Math.max(0, output.performanceTime + (stopAt - output.contextTime) * 1000 - performance.now());
+      }
+      return Math.max(0, (stopAt - audio.currentTime) * 1000);
     }
     if (!typewriter) {
       if (kind !== 'print') knock(at, kind === 'space' ? 160 : 260, 0.024, 0.2);
@@ -397,16 +490,16 @@
   const keyTimers = new WeakMap();
   const defaultKeyCodes = { space: 'Space', return: 'Enter', delete: 'Backspace' };
   let fallbackIndex = 0;
-  function strike(kind, code) {
+  function strike(kind, code, role) {
     if (keys.length) {
       const cap = keys.find(key => key.dataset.code === (code || defaultKeyCodes[kind])) || keys[fallbackIndex++ % keys.length];
       cap.classList.add('is-struck');
       clearTimeout(keyTimers.get(cap));
       keyTimers.set(cap, setTimeout(() => cap.classList.remove('is-struck'), 120));
     }
-    playSound(kind);
+    const impactInMs = playSound(kind, role);
     if (consoleReceipt) {
-      document.dispatchEvent(new CustomEvent('gulgam:strike', { detail: { kind, code } }));
+      document.dispatchEvent(new CustomEvent('gulgam:strike', { detail: { kind, code, role, impactInMs } }));
     }
   }
 
@@ -416,10 +509,24 @@
   let shiftReturn = false;
   let commitReturn = false;
   if (consoleReceipt) {
-    document.addEventListener('gulgam:ratchet', () => playSound('ratchet'));
+    if (roundKeys) {
+      const lever = document.querySelector('[data-return-handle]');
+      lever?.addEventListener('pointerdown', startAudio, { capture: true });
+      lever?.addEventListener('pointerup', startAudio, { capture: true });
+      document.addEventListener('gulgam:ratchet', event => {
+        if (!startAudio()) return;
+        const steps = Math.min(3, Math.max(1, Math.trunc(event.detail?.steps) || 1));
+        const at = Math.max(audio.currentTime + .004, nextDetent);
+        carriageSlide(at, .034 + (steps - 1) * .015);
+        for (let i = 0; i < steps; i++) ratchetTooth(at + i * .015, 1);
+        nextDetent = at + steps * .015;
+      });
+    } else {
+      document.addEventListener('gulgam:ratchet', () => playSound('ratchet'));
+    }
     document.addEventListener('gulgam:key-sound', event => {
-      const { kind, code } = event.detail;
-      strike(kind, code);
+      const { kind, code, role } = event.detail;
+      strike(kind, code, role);
     });
   }
   function recentIMECommit() {
@@ -551,7 +658,7 @@
       element('receipt-adjective').textContent = adjective;
       element('receipt-elapsed').textContent = displayWritingTime();
       document.dispatchEvent(new CustomEvent('gulgam:receipt', {
-        detail: { text: editor.value, animate, playSound }
+        detail: { text: editor.value, animate, playSound: kind => playSound(kind, 'receipt') }
       }));
     } else {
       element('receipt-words').textContent = wordPair();

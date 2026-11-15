@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="두 단어로 시작해 한 문장을 쓰고 글 영수증을 뽑는 글감 타자기.">
+  <title>원형 글쇠 타자기 · GULGAM</title>
+  <link rel="icon" href="../../assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../common.css">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="imprint.css">
+  <link rel="stylesheet" href="edition.css">
+  <link rel="stylesheet" href="hood.css">
+  <link rel="stylesheet" href="../modes.css">
+  <script defer src="../../words.js"></script>
+  <script defer src="../../app.js"></script>
+  <script defer src="strike.js"></script>
+  <script defer src="typesetter.js"></script>
+</head>
+<body data-edition="typewriter" data-key-shape="round" data-view="write">
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="g-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="g-sound" viewBox="0 0 24 24"><path d="m11.8 4-6 4.8H2.5v6.4h3.3l6 4.8Z" fill="currentColor" stroke="none"/><path d="M15.1 8.5a4.6 4.6 0 0 1 0 7m3-10a8.8 8.8 0 0 1 0 13"/></symbol>
+    <symbol id="g-mute" viewBox="0 0 24 24"><path d="m11.8 4-6 4.8H2.5v6.4h3.3l6 4.8Z" fill="currentColor" stroke="none"/><path d="m15.5 9 6 6m0-6-6 6"/></symbol>
+    <symbol id="g-roll" viewBox="0 0 24 24"><path d="M8 6.5A7.5 7.5 0 1 1 5 13M9.3 2.8 6 6.5l3.9 2.8"/></symbol>
+    <symbol id="g-enter" viewBox="0 0 24 24"><path d="M19 5v9H5m5-5-5 5 5 5"/></symbol>
+    <symbol id="g-back" viewBox="0 0 24 24"><path d="M20 12H4m6-6-6 6 6 6"/></symbol>
+  </svg>
+  <header class="topnav column">
+    <a href="../../" class="logotype" aria-label="GULGAM 기본 모드로" lang="en">gul<strong>gam</strong></a>
+    <nav class="nav-links" aria-label="타자기 메뉴">
+      <button type="button" id="sound" class="icon sound-toggle" aria-label="타건음" title="타건음" aria-pressed="true"><svg class="sound-on" aria-hidden="true"><use href="#g-sound"/></svg><svg class="sound-off" aria-hidden="true"><use href="#g-mute"/></svg></button>
+      <a href="../../">기본 모드</a>
+      <span class="typewriter-modes" role="group" aria-label="타자기 선택">
+        <a href="../">사각 글쇠</a>
+        <span aria-hidden="true">/</span>
+        <span class="current-mode" aria-current="page">원형 글쇠</span>
+      </span>
+      <button type="button" data-theme-toggle class="icon mode-button" title="화면 테마 전환" aria-label="화면 테마 전환"><svg aria-hidden="true"><use href="#g-theme"/></svg></button>
+    </nav>
+  </header>
+
+  <main class="column workspace console">
+    <section id="write-view" data-typesetter aria-label="타자기로 글쓰기">
+      <div class="machine">
+        <div class="paper-sheet" data-paper-sheet>
+          <header class="context-bar">
+            <div class="prompt"><span class="prompt-label">오늘의 글감</span><h1 id="words" aria-live="polite"></h1></div>
+            <button id="reroll" type="button" aria-label="글감 다시 뽑기" title="글감 다시 뽑기"><svg aria-hidden="true"><use href="#g-roll"/></svg><span>다른 글감</span></button>
+          </header>
+          <textarea id="editor" rows="3" spellcheck="false" aria-label="나의 글" aria-describedby="editor-shortcuts" enterkeyhint="send" placeholder="첫 문장을 찍어 보세요."></textarea>
+          <span class="write-guide" data-write-guide aria-hidden="true"></span>
+          <span class="paper-caret" data-paper-caret aria-hidden="true"></span>
+        </div>
+        <div class="carriage">
+          <button class="return-handle" type="button" data-return-handle aria-label="왼쪽으로 당기거나 눌러 줄바꿈" title="왼쪽으로 당기거나 눌러 줄바꿈">
+            <span class="return-arm" aria-hidden="true"><span class="return-grip"></span></span>
+            <span class="return-label" aria-hidden="true"><svg><use href="#g-enter"/></svg>줄바꿈</span>
+          </button>
+          <div class="platen" aria-hidden="true">
+            <span class="platen-wheel"></span>
+            <div class="carriage-scale" data-carriage-scale>
+              <i class="margin-stop left"></i><i class="margin-stop right"></i>
+              <i class="carriage-index" data-carriage-index></i>
+            </div>
+            <span class="platen-wheel"></span>
+          </div>
+        </div>
+        <div class="machine-deck">
+          <div class="deck-hood" aria-hidden="true"><span class="striking-bar" data-typebar></span></div>
+          <div class="keyboard" data-ui-keyboard data-layout="ko" data-shift="off" role="group" aria-label="화면 자판">
+            <div class="letter-row">
+              <button type="button" class="function-key" data-code="Lang1" aria-label="한글과 영문 자판 전환" aria-pressed="false"><span class="key-name"><span class="hangul-mode">한</span> / <span class="latin-mode">영</span></span></button>
+              <button type="button" data-code="Digit1" aria-label="1"><span data-key-primary>1</span><span data-key-secondary>1</span></button>
+              <button type="button" data-code="Digit2" aria-label="2"><span data-key-primary>2</span><span data-key-secondary>2</span></button>
+              <button type="button" data-code="Digit3" aria-label="3"><span data-key-primary>3</span><span data-key-secondary>3</span></button>
+              <button type="button" data-code="Digit4" aria-label="4"><span data-key-primary>4</span><span data-key-secondary>4</span></button>
+              <button type="button" data-code="Digit5" aria-label="5"><span data-key-primary>5</span><span data-key-secondary>5</span></button>
+              <button type="button" data-code="Digit6" aria-label="6"><span data-key-primary>6</span><span data-key-secondary>6</span></button>
+              <button type="button" data-code="Digit7" aria-label="7"><span data-key-primary>7</span><span data-key-secondary>7</span></button>
+              <button type="button" data-code="Digit8" aria-label="8"><span data-key-primary>8</span><span data-key-secondary>8</span></button>
+              <button type="button" data-code="Digit9" aria-label="9"><span data-key-primary>9</span><span data-key-secondary>9</span></button>
+              <button type="button" data-code="Digit0" aria-label="0"><span data-key-primary>0</span><span data-key-secondary>0</span></button>
+              <button type="button" class="function-key" data-code="Backspace" aria-label="지우기"><span aria-hidden="true" class="key-symbol">⌫</span><span class="key-name">지우기</span></button>
+            </div>
+            <div class="letter-row">
+              <button type="button" data-code="KeyQ" aria-label="Q"><span data-key-primary>Q</span><span data-key-secondary>Q</span></button>
+              <button type="button" data-code="KeyW" aria-label="W"><span data-key-primary>W</span><span data-key-secondary>W</span></button>
+              <button type="button" data-code="KeyE" aria-label="E"><span data-key-primary>E</span><span data-key-secondary>E</span></button>
+              <button type="button" data-code="KeyR" aria-label="R"><span data-key-primary>R</span><span data-key-secondary>R</span></button>
+              <button type="button" data-code="KeyT" aria-label="T"><span data-key-primary>T</span><span data-key-secondary>T</span></button>
+              <button type="button" data-code="KeyY" aria-label="Y"><span data-key-primary>Y</span><span data-key-secondary>Y</span></button>
+              <button type="button" data-code="KeyU" aria-label="U"><span data-key-primary>U</span><span data-key-secondary>U</span></button>
+              <button type="button" data-code="KeyI" aria-label="I"><span data-key-primary>I</span><span data-key-secondary>I</span></button>
+              <button type="button" data-code="KeyO" aria-label="O"><span data-key-primary>O</span><span data-key-secondary>O</span></button>
+              <button type="button" data-code="KeyP" aria-label="P"><span data-key-primary>P</span><span data-key-secondary>P</span></button>
+              <button type="button" class="function-key" data-code="Enter" aria-label="Enter · 글 뽑기"><span aria-hidden="true" class="key-symbol">↵</span><span class="key-name">출력</span></button>
+            </div>
+            <div class="letter-row">
+              <button type="button" data-code="KeyA" aria-label="A"><span data-key-primary>A</span><span data-key-secondary>A</span></button>
+              <button type="button" data-code="KeyS" aria-label="S"><span data-key-primary>S</span><span data-key-secondary>S</span></button>
+              <button type="button" data-code="KeyD" aria-label="D"><span data-key-primary>D</span><span data-key-secondary>D</span></button>
+              <button type="button" data-code="KeyF" aria-label="F"><span data-key-primary>F</span><span data-key-secondary>F</span></button>
+              <button type="button" data-code="KeyG" aria-label="G"><span data-key-primary>G</span><span data-key-secondary>G</span></button>
+              <button type="button" data-code="KeyH" aria-label="H"><span data-key-primary>H</span><span data-key-secondary>H</span></button>
+              <button type="button" data-code="KeyJ" aria-label="J"><span data-key-primary>J</span><span data-key-secondary>J</span></button>
+              <button type="button" data-code="KeyK" aria-label="K"><span data-key-primary>K</span><span data-key-secondary>K</span></button>
+              <button type="button" data-code="KeyL" aria-label="L"><span data-key-primary>L</span><span data-key-secondary>L</span></button>
+              <button type="button" data-code="Semicolon" aria-label=";"><span data-key-primary>;</span><span data-key-secondary>;</span></button>
+              <button type="button" data-code="Quote" aria-label="'"><span data-key-primary>'</span><span data-key-secondary>'</span></button>
+            </div>
+            <div class="letter-row">
+              <button type="button" class="function-key" data-code="ShiftLeft" aria-label="왼쪽 Shift" aria-pressed="false"><span aria-hidden="true" class="key-symbol">⇧</span><span class="key-name">Shift</span></button>
+              <button type="button" data-code="KeyZ" aria-label="Z"><span data-key-primary>Z</span><span data-key-secondary>Z</span></button>
+              <button type="button" data-code="KeyX" aria-label="X"><span data-key-primary>X</span><span data-key-secondary>X</span></button>
+              <button type="button" data-code="KeyC" aria-label="C"><span data-key-primary>C</span><span data-key-secondary>C</span></button>
+              <button type="button" data-code="KeyV" aria-label="V"><span data-key-primary>V</span><span data-key-secondary>V</span></button>
+              <button type="button" data-code="KeyB" aria-label="B"><span data-key-primary>B</span><span data-key-secondary>B</span></button>
+              <button type="button" data-code="KeyN" aria-label="N"><span data-key-primary>N</span><span data-key-secondary>N</span></button>
+              <button type="button" data-code="KeyM" aria-label="M"><span data-key-primary>M</span><span data-key-secondary>M</span></button>
+              <button type="button" data-code="Comma" aria-label=","><span data-key-primary>,</span><span data-key-secondary>,</span></button>
+              <button type="button" data-code="Period" aria-label="."><span data-key-primary>.</span><span data-key-secondary>.</span></button>
+              <button type="button" data-code="Slash" aria-label="/"><span data-key-primary>/</span><span data-key-secondary>/</span></button>
+              <button type="button" class="function-key" data-code="ShiftRight" aria-label="오른쪽 Shift" aria-pressed="false"><span aria-hidden="true" class="key-symbol">⇧</span><span class="key-name">Shift</span></button>
+            </div>
+            <div class="control-row">
+              <button type="button" class="function-key" data-code="ArrowLeft" aria-label="커서 왼쪽"><span aria-hidden="true" class="key-symbol">←</span></button>
+              <button type="button" class="function-key" data-code="Space" aria-label="띄어쓰기"><span aria-hidden="true" class="key-symbol">␣</span><span class="key-name">Space</span></button>
+              <button type="button" class="function-key" data-code="ArrowRight" aria-label="커서 오른쪽"><span aria-hidden="true" class="key-symbol">→</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="layout-settings">
+          <label class="keyboard-layout"><select data-key-layout aria-label="한글 자판 배열"><option value="390">공병우 세벌식 390</option><option value="2">두벌식</option></select></label>
+          <div class="role-legend" data-role-legend aria-label="글쇠 색 구분"><span><i class="role-initial"></i>초성</span><span><i class="role-medial"></i>중성</span><span><i class="role-final"></i>종성</span></div>
+        </div>
+      </div>
+      <footer class="writing-tools">
+        <div class="draft-info"><span id="word-count">0자</span><span id="save-status" role="status"></span></div>
+        <div class="type-position"><span><b data-type-line>01</b>행</span><span><b data-type-column>01</b>칸</span></div>
+        <span id="editor-shortcuts"><kbd>Shift + Enter</kbd> 줄바꿈<span class="assist">, Enter로 글 뽑기</span></span>
+        <button id="pull" class="print-button" type="button" title="Enter로 글 뽑기" disabled>글 뽑기<svg aria-hidden="true"><use href="#g-enter"/></svg></button>
+      </footer>
+    </section>
+
+    <section id="receipt-view" hidden aria-labelledby="receipt-focus">
+      <article class="receipt-slip" aria-label="출력 내용">
+        <header class="receipt-heading"><span class="logotype" aria-hidden="true" lang="en">gul<strong>gam</strong></span><h1 id="receipt-focus" tabindex="-1">글 영수증</h1></header>
+        <div class="receipt-meta">
+          <div id="receipt-noun"></div>
+          <div id="receipt-adjective"></div>
+          <div class="receipt-timing">걸린 시간 <span id="receipt-elapsed"></span></div>
+        </div>
+        <div class="receipt-body"><div id="receipt-text"></div><div id="receipt-playback" aria-hidden="true"></div></div>
+      </article>
+      <div class="output-controls">
+        <button id="back" type="button"><svg aria-hidden="true"><use href="#g-back"/></svg>다시 쓰기</button>
+        <button id="copy" type="button">글 복사</button>
+        <button id="download" type="button">TXT 저장</button>
+        <button id="skip-print" type="button" hidden>바로 보기</button>
+      </div>
+      <textarea id="copy-fallback" readonly hidden aria-label="복사용 본문"></textarea>
+    </section>
+  </main>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>

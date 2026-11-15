@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="color-scheme" content="light dark">
   <meta name="description" content="두 단어로 시작해 한 문장을 쓰고 글 영수증을 뽑는 글감 타자기.">
-  <title>타자기 · GULGAM</title>
+  <title>사각 글쇠 타자기 · GULGAM</title>
   <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../common.css">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="edition.css">
+  <link rel="stylesheet" href="modes.css">
   <script defer src="../words.js"></script>
   <script defer src="../app.js"></script>
   <script defer src="strike.js"></script>
@@ -29,7 +30,11 @@
     <nav class="nav-links" aria-label="타자기 메뉴">
       <button type="button" id="sound" class="icon sound-toggle" aria-label="타건음" title="타건음" aria-pressed="true"><svg class="sound-on" aria-hidden="true"><use href="#g-sound"/></svg><svg class="sound-off" aria-hidden="true"><use href="#g-mute"/></svg></button>
       <a href="../">기본 모드</a>
-      <span class="current-mode" aria-current="page">타자기</span>
+      <span class="typewriter-modes" role="group" aria-label="타자기 선택">
+        <span class="current-mode" aria-current="page">사각 글쇠</span>
+        <span aria-hidden="true">/</span>
+        <a href="round/">원형 글쇠</a>
+      </span>
       <button type="button" data-theme-toggle class="icon mode-button" title="화면 테마 전환" aria-label="화면 테마 전환"><svg aria-hidden="true"><use href="#g-theme"/></svg></button>
     </nav>
   </header>

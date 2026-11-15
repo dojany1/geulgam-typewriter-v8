@@ -1,0 +1,28 @@
+.deck-hood {
+  position: relative;
+  height: clamp(55px, 14.35cqw, 102px);
+  width: 100%;
+  background: url("./deck-hood.svg") center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.deck-hood .striking-bar {
+  position: absolute;
+  left: 50%;
+  top: -3%;
+  width: clamp(1px, .31cqw, 2.2px);
+  height: 51%;
+  margin-left: -.15cqw;
+  background: var(--fg);
+  transform-origin: center bottom;
+  transform: rotate(-68deg) scaleY(.63);
+}
+.deck-hood .striking-bar::before {
+  content: "";
+  position: absolute;
+  width: clamp(4px, .95cqw, 7px);
+  height: clamp(2px, .68cqw, 5px);
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--fg);
+}

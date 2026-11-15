@@ -1,0 +1,29 @@
+@font-face {
+  font-family: "GF Typing Local";
+  src: local("GF Typing Regular"), local("GFTyping-Regular"), local("GF 타이핑 Regular"),
+       local("GF 타이핑"), local("GF Typing"), local("GF Typing Medium");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gulgam Type";
+  src: url("../../assets/gulgam-type.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+1100-1112, U+1161-1175, U+11A8-11C2, U+3131-3163, U+AC00-D7A3;
+}
+
+@font-face {
+  font-family: "Courier Prime";
+  src: url("../../assets/courier-regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --print-font: "GF Typing Local", "Gulgam Type", "Courier Prime", "Noto Sans KR", serif;
+}

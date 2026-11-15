@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 124" preserveAspectRatio="none" fill="none">
+  <style>
+    :root { --plate: #e5e5e5; --paper: #fafafa; --ink: #303030; --rule: #858585; }
+    @media (prefers-color-scheme: dark) {
+      :root { --plate: #303030; --paper: #232323; --ink: #dedede; --rule: #797979; }
+    }
+  </style>
+  <defs>
+    <clipPath id="basket">
+      <path d="M294 0H426V17L519 66V98H201V66L294 17Z"/>
+    </clipPath>
+    <path id="lever" d="M0 105V123L2 127V176" stroke="var(--ink)" stroke-width="1.45"/>
+  </defs>
+  <g clip-path="url(#basket)">
+    <path d="M201 0H519V98H201Z" fill="var(--paper)"/>
+    <g transform="translate(360 -34) scale(1 .82)">
+      <use href="#lever" transform="rotate(-72)"/>
+      <use href="#lever" transform="rotate(-68)"/>
+      <use href="#lever" transform="rotate(-64)"/>
+      <use href="#lever" transform="rotate(-60)"/>
+      <use href="#lever" transform="rotate(-56)"/>
+      <use href="#lever" transform="rotate(-52)"/>
+      <use href="#lever" transform="rotate(-48)"/>
+      <use href="#lever" transform="rotate(-44)"/>
+      <use href="#lever" transform="rotate(-40)"/>
+      <use href="#lever" transform="rotate(-36)"/>
+      <use href="#lever" transform="rotate(-32)"/>
+      <use href="#lever" transform="rotate(-28)"/>
+      <use href="#lever" transform="rotate(-24)"/>
+      <use href="#lever" transform="rotate(-20)"/>
+      <use href="#lever" transform="rotate(-16)"/>
+      <use href="#lever" transform="rotate(-12)"/>
+      <use href="#lever" transform="rotate(-8)"/>
+      <use href="#lever" transform="rotate(-4)"/>
+      <use href="#lever" transform="rotate(0)"/>
+      <use href="#lever" transform="rotate(4)"/>
+      <use href="#lever" transform="rotate(8)"/>
+      <use href="#lever" transform="rotate(12)"/>
+      <use href="#lever" transform="rotate(16)"/>
+      <use href="#lever" transform="rotate(20)"/>
+      <use href="#lever" transform="rotate(24)"/>
+      <use href="#lever" transform="rotate(28)"/>
+      <use href="#lever" transform="rotate(32)"/>
+      <use href="#lever" transform="rotate(36)"/>
+      <use href="#lever" transform="rotate(40)"/>
+      <use href="#lever" transform="rotate(44)"/>
+      <use href="#lever" transform="rotate(48)"/>
+      <use href="#lever" transform="rotate(52)"/>
+      <use href="#lever" transform="rotate(56)"/>
+      <use href="#lever" transform="rotate(60)"/>
+      <use href="#lever" transform="rotate(64)"/>
+      <use href="#lever" transform="rotate(68)"/>
+      <use href="#lever" transform="rotate(72)"/>
+    </g>
+    <path d="M270 8C296 38 326 52 360 52S424 38 450 8" stroke="var(--rule)" stroke-width="1.2"/>
+    <path d="M337 0H344V12L351 20L350 24H344L337 15ZM383 0H376V12L369 20L370 24H376L383 15Z" fill="var(--ink)"/>
+  </g>
+  <!-- The shoulders and open basket are one cut outline. -->
+  <path d="M11 1H302Q307 1 307 6V17Q307 23 301 26L235 59Q216 69 216 81V88Q216 93 222 93H498Q504 93 504 88V81Q504 69 485 59L419 26Q413 23 413 17V6Q413 1 418 1H709Q715 1 716 8L719 116Q719 122 713 122H7Q1 122 1 116L4 8Q5 1 11 1Z" fill="var(--plate)" stroke="var(--rule)" stroke-width="1.1"/>
+</svg>
