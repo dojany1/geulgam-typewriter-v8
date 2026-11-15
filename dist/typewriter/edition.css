@@ -28,7 +28,6 @@ body[data-edition="typewriter"] { display: flow-root; }
 .context-bar button:hover { text-decoration: underline; text-underline-offset: 3px; }
 .writing-area {
   --inset: clamp(17px, 4vw, 48px);
-  --leading: 34px;
   --paper-line: color-mix(in srgb, var(--fg) 11%, transparent);
   position: relative;
   min-height: 146px;
@@ -44,10 +43,9 @@ body[data-edition="typewriter"] { display: flow-root; }
   border-inline: 1px solid var(--paper-line);
   pointer-events: none;
 }
-.writing-area #words { font-size: 17px; line-height: 25px; }
 .writing-area #editor {
-  min-height: 0; margin-top: 6px; line-height: var(--leading);
-  background-image: repeating-linear-gradient(to bottom, transparent 0 calc(var(--leading) - 1px), var(--paper-line) calc(var(--leading) - 1px) var(--leading));
+  min-height: 0; margin-top: 6px;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 calc(var(--writing-line-height) - 1px), var(--paper-line) calc(var(--writing-line-height) - 1px) var(--writing-line-height));
   background-attachment: local;
 }
 [data-type-measure] {
@@ -91,11 +89,11 @@ body[data-edition="typewriter"] { display: flow-root; }
 }
 .type-cell[data-major]::after { height: 8px; }
 .type-division {
-  font: 600 9px/1 Poppins, sans-serif; color: var(--muted);
+  font: 600 9px/1 var(--text-font); color: var(--muted);
 }
 .type-glyph, .type-imprint {
   max-width: 100%; overflow: hidden;
-  font: 650 25px/1.2 "Noto Sans KR", Poppins, sans-serif;
+  font: 650 25px/1.2 var(--text-font);
 }
 .type-cell[data-outside]::before, .type-cell[data-outside]::after { opacity: .25; }
 .type-cell[data-outside] .type-division { visibility: hidden; }
@@ -261,7 +259,6 @@ body[data-edition="typewriter"] { display: flow-root; }
   background: var(--fg);
 }
 .key-row button:is(.is-struck, :active) [data-key-secondary] { color: inherit; }
-.keyboard[data-layout="en"] [data-key-primary] { font-family: Poppins, sans-serif; }
 .key-row [data-code="Lang1"] .key-name { color: var(--key-detail); }
 .keyboard[data-layout="ko"] .hangul-mode,
 .keyboard[data-layout="en"] .latin-mode { color: var(--fg); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
@@ -287,8 +284,8 @@ body[data-edition="typewriter"] { display: flow-root; }
 .receipt-meta { border-block: 1px dashed var(--line); padding: 14px 0; font-size: 18px; line-height: 1.5; }
 .receipt-timing { margin-top: 8px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .receipt-body { display: grid; margin-top: 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.receipt-body > div { grid-area: 1 / 1; min-width: 0; font: 400 18px/1.65 Poppins, "Noto Sans KR", sans-serif; }
-.receipt-body #receipt-text { font: inherit; font-size: 18px; line-height: 1.65; font-weight: 400; opacity: 0; pointer-events: none; user-select: none; }
+.receipt-body > div { grid-area: 1 / 1; min-width: 0; }
+.receipt-body #receipt-text { opacity: 0; pointer-events: none; user-select: none; }
 .output-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; padding: 9px 0; }
 .output-controls button { display: flex; align-items: center; gap: 4px; min-height: 34px; font-size: 12px; font-weight: 600; }
 .output-controls svg { width: 15px; height: 15px; }
@@ -298,8 +295,6 @@ body[data-edition="typewriter"] { display: flow-root; }
 @media (max-width: 650px) {
   .workspace { margin-top: clamp(24px, 5.5svh, 54px); }
   .writing-area { min-height: 140px; height: clamp(140px, 24svh, 196px); padding-top: 13px; }
-  .writing-area { --leading: 27px; }
-  .writing-area #words { font-size: 15px; }
   .carriage { --cell-pitch: 29px; }
   .type-window { height: 64px; }
   .type-glyph, .type-imprint { font-size: 21px; }

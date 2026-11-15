@@ -2,7 +2,11 @@
 @font-face { font-family: Poppins; src: url("assets/poppins-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
 @font-face { font-family: Poppins; src: url("assets/poppins-700.woff2") format("woff2"); font-weight: 700 900; font-display: swap; }
 @font-face { font-family: "Noto Sans KR"; src: url("assets/noto-kr.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
-body { min-height: 100svh; font: 500 13px/1.5 Poppins,"Noto Sans KR",sans-serif; -webkit-font-smoothing: antialiased; }
+:root {
+  --text-font: Poppins, "Noto Sans KR", sans-serif;
+  --writing-line-height: 34px;
+}
+body { min-height: 100svh; font: 500 13px/1.5 var(--text-font); -webkit-font-smoothing: antialiased; }
 button { appearance: none; background: transparent; border: 0; border-radius: 0; padding: 0; }
 .sprite { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
 svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
@@ -13,7 +17,7 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 .banner-close { position: absolute; right: clamp(10px,2vw,28px); top: 0; width: 24px; height: 100%; display: grid; place-items: center; }
 .banner-close svg { width: 15px; height: 15px; }
 .topnav { display: flex; align-items: center; justify-content: space-between; height: 46px; margin-top: 30px; }
-.logotype { font: 500 19px/1 Poppins,"Noto Sans KR",sans-serif; letter-spacing: -.6px; }
+.logotype { font: 500 19px/1 var(--text-font); letter-spacing: -.6px; }
 .logotype strong { font-weight: 700; }
 .nav-links { display: flex; align-items: center; gap: clamp(16px,2.2vw,28px); font-size: 13px; font-weight: 600; }
 .nav-links button, .nav-links a { min-height: 32px; display: inline-flex; align-items: center; }
@@ -27,7 +31,7 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 .context-bar svg { width: 13px; height: 13px; }
 .play-arrow { display: inline-block; width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 8px solid currentColor; }
 .writing-area { display: flex; flex-direction: column; border-top: 1px solid var(--line); min-height: 220px; height: clamp(220px,44svh,410px); padding: 14px 0 8px; }
-#words, #editor { font: 400 23px/34px Poppins,"Noto Sans KR",sans-serif; letter-spacing: -.35px; }
+#words, #editor { font: 400 23px/var(--writing-line-height) var(--text-font); letter-spacing: -.35px; }
 #words { color: light-dark(#737373,#ababab); margin: 0; word-break: keep-all; }
 #editor {
   display: block; flex: 1; width: 100%; min-height: 94px; padding: 0; margin: 4px 0 0;
@@ -51,7 +55,7 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 .result-area { min-height: clamp(220px,44svh,410px); padding: 14px 0 27px; border-top: 1px solid var(--line); }
 #receipt-focus { font-size: 14px; margin: 0 0 9px; outline: none; }
 .result-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px; color: var(--muted); font-size: 12px; }
-#receipt-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 23px; font-weight: 400; line-height: 1.5; }
+#receipt-text, #receipt-playback { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 23px; font-weight: 400; line-height: 1.5; }
 .result-tools button { font-weight: 600; }
 .result-tools button:hover, .tools-list button:hover { text-decoration: underline; }
 #receipt-length { color: var(--muted); font-size: 12px; }
@@ -67,6 +71,7 @@ dialog::backdrop { background: rgb(0 0 0 / .23); }
 .setting-row button:hover { text-decoration: underline; }
 .tools-list { padding-top: 10px; justify-content: space-between; }
 @media (max-width: 650px) {
+  :root { --writing-line-height: 25px; }
   .column { width: calc(100% - 40px); }
   .topnav { margin-top: 13px; }
   .nav-links { gap: 14px; font-size: 12px; }
@@ -76,7 +81,7 @@ dialog::backdrop { background: rgb(0 0 0 / .23); }
   .context-bar { margin-bottom: 11px; gap: 12px; }
   .context-bar button, .context-bar a { font-size: 11px; }
   .writing-area { height: clamp(195px,39svh,340px); min-height: 195px; padding-top: 13px; }
-  #words, #editor, #receipt-text { font-size: 17px; line-height: 25px; letter-spacing: -.1px; }
+  #words, #editor, #receipt-text, #receipt-playback { font-size: 17px; line-height: var(--writing-line-height); letter-spacing: -.1px; }
   .article-tools { gap: 8px; flex-wrap: wrap; padding-top: 11px; }
   .pager button { height: 27px; width: 27px; }
   .attribution { flex: 1; min-width: 110px; line-height: 17px; }
