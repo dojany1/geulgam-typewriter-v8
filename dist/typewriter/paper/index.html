@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="타자기에 종이를 끼우고, 두 단어에서 시작하는 나만의 글을 써보세요.">
+  <title>글감 타자기 · GULGAM</title>
+  <link rel="icon" href="../../assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../common.css">
+  <link rel="stylesheet" href="edition.css">
+  <link rel="stylesheet" href="receipt.css">
+  <link rel="preload" as="image" href="../../assets/typewriter.webp">
+  <script defer src="../../words.js"></script>
+  <script defer src="../../app.js"></script>
+</head>
+<body class="edition" data-view="write" data-edition="typewriter">
+  <svg aria-hidden="true" class="icon-library" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M20 12H4m6-6-6 6 6 6"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3zM15.5 8.5a4.4 4.4 0 0 1 0 7m3-10a8.3 8.3 0 0 1 0 13"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3zM16 9l5 6m0-6-5 6"/></symbol>
+    <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-roll" viewBox="0 0 24 24"><path d="M4 10a8 8 0 0 1 14-3l2 2M20 4v5h-5m5 5a8 8 0 0 1-14 3l-2-2m0 5v-5h5"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 8V3h10v5M7 16H3V8h18v8h-4M7 13h10v8H7zM10 16h4"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M8 8h12v13H8zM16 4H4v13"/></symbol>
+    <symbol id="i-txt" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></symbol>
+  </svg>
+  <header class="desk-header">
+    <div class="desk-header-inner">
+      <div class="identity"><strong lang="en">GULGAM</strong><span>글감 타자기</span></div>
+      <nav class="desk-nav" aria-label="타자기 도구">
+        <a class="home" href="../../"><svg aria-hidden="true"><use href="#i-back"/></svg>기본판</a>
+        <button id="sound" class="sound" type="button" title="타건음 켜기 또는 끄기" aria-pressed="true"><svg class="on" aria-hidden="true"><use href="#i-sound"/></svg><svg class="off" aria-hidden="true"><use href="#i-mute"/></svg><span data-sound-label>소리 켜짐</span></button>
+        <button type="button" data-theme-toggle class="theme" aria-label="화면 테마 전환" title="화면 테마 전환"><svg aria-hidden="true"><use href="#i-contrast"/></svg></button>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section id="write-view" class="desk" aria-label="타자기로 글쓰기">
+      <div class="machine-stage">
+        <div class="paper">
+          <div class="paper-heading"><span>오늘의 글감</span><span id="paper-date"></span></div>
+          <div class="word-line">
+            <h1 id="words" aria-live="polite"></h1>
+            <button id="reroll" type="button" title="글감 다시 뽑기" aria-label="글감 다시 뽑기"><svg aria-hidden="true"><use href="#i-roll"/></svg><span>다시 뽑기</span></button>
+          </div>
+          <div class="paper-lines"><textarea id="editor" spellcheck="false" rows="4" aria-label="나의 글" placeholder="두 단어로 자유롭게 써보세요."></textarea></div>
+          <div class="paper-info"><span id="save-status" role="status"></span><span id="word-count">0자</span></div>
+        </div>
+        <div class="machine-window" aria-hidden="true">
+          <div class="machine-body">
+            <img class="machine-photo" src="../../assets/typewriter.webp" alt="" width="1729" height="910" draggable="false" fetchpriority="high">
+            <div class="carriage" data-carriage><span></span></div>
+            <div class="keycaps" data-reactive-keys>
+              <i data-code="Digit1" style="left:21.014%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit2" style="left:26.667%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit3" style="left:32.609%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit4" style="left:38.406%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit5" style="left:44.203%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit6" style="left:50.000%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit7" style="left:55.942%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit8" style="left:62.174%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit9" style="left:67.536%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Digit0" style="left:73.623%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Minus" style="left:79.855%;top:51.240%;width:4.15%;height:4.9%"></i>
+              <i data-code="Tab" style="left:17.391%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyQ" style="left:23.188%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyW" style="left:29.130%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyE" style="left:35.072%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyR" style="left:41.014%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyT" style="left:46.957%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyY" style="left:52.899%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyU" style="left:58.696%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyI" style="left:64.638%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyO" style="left:70.870%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyP" style="left:77.101%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="BracketLeft" style="left:82.754%;top:59.504%;width:4.15%;height:4.9%"></i>
+              <i data-code="CapsLock" style="left:19.275%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyA" style="left:25.217%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyS" style="left:31.014%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyD" style="left:36.957%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyF" style="left:42.899%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyG" style="left:48.986%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyH" style="left:54.783%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyJ" style="left:61.014%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyK" style="left:66.812%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyL" style="left:73.043%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="Enter" style="left:79.130%;top:68.044%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyZ" style="left:27.536%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyX" style="left:33.478%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyC" style="left:39.420%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyV" style="left:45.362%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyB" style="left:51.594%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyN" style="left:57.391%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="KeyM" style="left:63.478%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="Comma" style="left:69.565%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="Period" style="left:76.087%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="Slash" style="left:81.884%;top:76.033%;width:4.15%;height:4.9%"></i>
+              <i data-code="Space" style="left:50.000%;top:85.950%;width:61.3%;height:4.6%"></i>
+              <i data-code="Backspace" style="left:79.855%;top:51.240%;width:4.15%;height:4.9%"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="desk-actions">
+        <button class="print" id="pull" type="button" disabled><svg aria-hidden="true"><use href="#i-print"/></svg>글 뽑기</button>
+        <div class="quick-export">
+          <button type="button" data-action="copy" disabled><svg aria-hidden="true"><use href="#i-copy"/></svg>글 복사</button>
+          <button type="button" data-action="download" disabled><svg aria-hidden="true"><use href="#i-txt"/></svg>TXT 저장</button>
+        </div>
+      </div>
+    </section>
+    <section id="receipt-view" class="receipt-station" hidden aria-labelledby="receipt-focus">
+      <div class="receipt-printer">
+        <div class="receipt-outlet" aria-hidden="true"><span></span></div>
+        <div class="receipt-feed">
+          <article class="receipt-paper">
+            <header class="receipt-heading">
+              <div class="receipt-imprint" lang="en">GULGAM</div>
+              <h1 id="receipt-focus" tabindex="-1">글 영수증</h1>
+            </header>
+            <div class="receipt-meta"><span>오늘의 글감</span><time id="receipt-date"></time></div>
+            <p id="receipt-words"></p>
+            <div id="receipt-text"></div>
+            <div class="receipt-total"><span>글자 수</span><span id="receipt-length"></span></div>
+          </article>
+        </div>
+      </div>
+      <div class="receipt-actions">
+        <button type="button" id="back"><span aria-hidden="true">↶</span> 다시 쓰기</button>
+        <button type="button" id="copy">글 복사</button>
+        <button type="button" id="download">TXT 저장</button>
+      </div>
+      <textarea id="copy-fallback" rows="4" readonly hidden aria-label="복사용 본문"></textarea>
+    </section>
+  </main>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>

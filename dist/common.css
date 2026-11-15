@@ -1,0 +1,31 @@
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f4f4f4,#232323);
+  --fg: light-dark(#080808,#fff);
+  --muted: light-dark(#707070,#aaa);
+  --line: light-dark(#c8c8c8,#444);
+  --soft: light-dark(#e6e6e6,#303030);
+  --accent: #ff5224;
+  --sheet: light-dark(#fff,#292929);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { min-width: 280px; margin: 0; }
+body { color: var(--fg); background: var(--bg); }
+[hidden] { display: none !important; }
+a { color: inherit; text-decoration: none; }
+button, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; }
+button:disabled { cursor: default; }
+button:focus-visible, a:focus-visible, dialog button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+::selection { background: light-dark(#c9c9c9,#545454); color: var(--fg); }
+#copy-fallback { display: block; width: 100%; max-width: 500px; height: 96px; margin: 12px auto 0; background: var(--sheet); color: var(--fg); }
+#toast {
+  position: fixed; z-index: 15; bottom: max(20px,env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: calc(100vw - 30px); padding: 8px 13px; border-radius: 2px;
+  color: var(--bg); background: var(--fg); pointer-events: none; font: 12px/1.45 system-ui,sans-serif;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
