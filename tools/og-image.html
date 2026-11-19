@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>글감 링크 미리보기 이미지 만들기</title>
+<style>
+  @font-face { font-family: Poppins; src: url("../dist/assets/poppins-500.woff2") format("woff2"); font-weight: 400 500; }
+  @font-face { font-family: Poppins; src: url("../dist/assets/poppins-700.woff2") format("woff2"); font-weight: 700 900; }
+  @font-face { font-family: "Noto Sans KR"; src: url("../dist/assets/noto-kr.woff2") format("woff2"); font-weight: 100 900; }
+  body { margin: 24px; font: 14px/1.5 system-ui, sans-serif; color: #222; background: #f4f4f4; }
+  canvas { display: block; width: 600px; max-width: 100%; margin: 12px 0; border: 1px solid #ccc; }
+  a { font-weight: 600; }
+</style>
+</head>
+<body>
+<p>저장소 루트를 정적 서버로 띄운 뒤 이 페이지를 열면 <code>og.png</code>(1200×630)를 그린다. 내려받아 <code>dist/assets/og.png</code>에 덮어쓴다.</p>
+<p id="status">그리는 중…</p>
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+(async () => {
+  const sans = '"Noto Sans KR", sans-serif';
+  const latin = 'Poppins, "Noto Sans KR", sans-serif';
+  await Promise.all(['700 120px "Noto Sans KR"', '400 30px "Noto Sans KR"', '500 40px Poppins', '700 40px Poppins']
+    .map(font => document.fonts.load(font)));
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#e4e0d8';
+  ctx.fillRect(0, 0, 1200, 630);
+
+  // Left: wordmark and tagline.
+  ctx.fillStyle = '#111';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '700 132px ' + sans;
+  ctx.fillText('글감', 96, 262);
+  ctx.font = '500 38px ' + sans;
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillText('두 단어로 짧은 글 한 편', 100, 330);
+  ctx.font = '400 28px ' + sans;
+  ctx.fillStyle = '#6f6b64';
+  ctx.fillText('무작위로 뽑힌 두 단어를 모두 넣어 쓰고,', 100, 392);
+  ctx.fillText('영수증으로 뽑아 친구에게 같은 글감을 보내요.', 100, 434);
+  ctx.fillStyle = '#111';
+  ctx.font = '500 34px ' + latin;
+  ctx.fillText('gul', 100, 530);
+  const gul = ctx.measureText('gul').width;
+  ctx.font = '700 34px ' + latin;
+  ctx.fillText('gam', 100 + gul, 530);
+
+  // Right: a receipt slip with a sample prompt.
+  const x = 760, y = 54, w = 360, h = 522, tooth = 12;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  for (let e = x; e < x + w; e += tooth * 2) { ctx.lineTo(Math.min(e + tooth, x + w), y + tooth); ctx.lineTo(Math.min(e + tooth * 2, x + w), y); }
+  ctx.lineTo(x + w, y + h);
+  for (let e = x + w; e > x; e -= tooth * 2) { ctx.lineTo(Math.max(e - tooth, x), y + h - tooth); ctx.lineTo(Math.max(e - tooth * 2, x), y + h); }
+  ctx.closePath();
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.16)'; ctx.shadowBlur = 26; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.restore();
+
+  const left = x + 36, right = x + w - 36;
+  const dash = yy => { ctx.save(); ctx.strokeStyle = '#c6c1b7'; ctx.lineWidth = 2; ctx.setLineDash([3, 8]); ctx.beginPath(); ctx.moveTo(left, yy); ctx.lineTo(right, yy); ctx.stroke(); ctx.restore(); };
+  let yy = y + 64;
+  ctx.fillStyle = '#111'; ctx.font = '500 26px ' + latin; ctx.fillText('gul', left, yy);
+  const g2 = ctx.measureText('gul').width; ctx.font = '700 26px ' + latin; ctx.fillText('gam', left + g2, yy);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#6f6b64'; ctx.font = '500 18px ' + sans; ctx.fillText('글 영수증', right, yy - 2);
+  ctx.font = '400 16px ' + sans; ctx.fillText('2026. 11. 19.', right, yy + 26); ctx.textAlign = 'left';
+  yy += 52; dash(yy);
+  yy += 58; ctx.fillStyle = '#111'; ctx.font = '400 44px ' + sans; ctx.fillText('연필', left, yy);
+  yy += 54; ctx.fillText('치킨', left, yy);
+  yy += 38; ctx.fillStyle = '#6f6b64'; ctx.font = '500 18px ' + sans; ctx.fillText('150자 이내 ✓ · 2인칭 · 쓸쓸함', left, yy);
+  yy += 26; dash(yy);
+  yy += 44; ctx.fillStyle = '#111'; ctx.font = '400 22px ' + sans;
+  for (const line of ['너는 치킨집 간판을 색연필로', '그렸다. 닭은 자꾸 비둘기처럼', '되었고, 너는 지우지 않았다.']) { ctx.fillText(line, left, yy); yy += 36; }
+  yy += 12; dash(yy);
+  yy += 40; ctx.fillStyle = '#6f6b64'; ctx.font = '500 17px ' + sans; ctx.fillText('3분 12초 · 46자', left, yy);
+
+  const link = document.createElement('a');
+  link.href = canvas.toDataURL('image/png');
+  link.download = 'og.png';
+  link.textContent = 'og.png 내려받기';
+  document.getElementById('status').replaceChildren(link);
+})().catch(error => { document.getElementById('status').textContent = '오류: ' + error; });
+</script>
+</body>
+</html>

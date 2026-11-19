@@ -8,7 +8,7 @@
   const roundKeys = document.body.dataset.keyShape === 'round';
   const soundButtons = all('#sound, [data-sound-toggle]');
   const soundLabels = all('[data-sound-label]');
-  const draftActions = all('[data-action="copy"], [data-action="download"]');
+  const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="share-image"]');
   const printButtons = all('#pull, [data-action="pull"]');
   const promptLabels = all('#words [data-prompt-word]');
   const promptProgress = element('prompt-progress');
@@ -20,6 +20,8 @@
   const themeKey = 'gulgam.theme.v1';
   const recentNouns = [];
   const carriage = document.querySelector('[data-carriage]');
+  const missionLines = all('[data-mission-line]');
+  const missionDialog = element('mission-dialog');
   let toastTimer;
   let composing = false;
 
@@ -77,6 +79,65 @@
     return rememberNoun(available[Math.floor(Math.random() * available.length)]);
   }
 
+  // A rule is judged here and can hold the receipt back. Conditions (viewpoint,
+  // mood, form) are only printed on the slip; whoever reads it judges those.
+  const ruleKinds = {
+    length: { values: gulgamWords.lengths, label: value => value + '자 이내' },
+    timer: { values: gulgamWords.minutes, label: value => value + '분 안에' },
+    ban: { values: gulgamWords.banned, label: value => '‘' + value + '’ 금지' }
+  };
+  const conditionKeys = Object.keys(gulgamWords.conditions);
+
+  function validRule(source) {
+    const kind = source && ruleKinds[source.type];
+    return kind && kind.values.includes(source.value) ? { type: source.type, value: source.value } : null;
+  }
+
+  function validConditions(source) {
+    const conditions = {};
+    for (const key of conditionKeys) {
+      const value = typeof source?.[key] === 'string' ? source[key].normalize('NFC') : '';
+      if (gulgamWords.conditions[key].includes(value)) conditions[key] = value;
+    }
+    return conditions;
+  }
+
+  function drawRule(type, avoid) {
+    const kind = ruleKinds[type];
+    if (!kind) return null;
+    let values = kind.values;
+    // A banned word inside a prompt noun would make the prompt impossible.
+    if (type === 'ban') values = values.filter(word => !promptNouns.some(noun => noun.includes(word) || word.includes(noun)));
+    const pool = values.length > 1 ? values.filter(value => value !== avoid) : values;
+    return pool.length ? { type, value: pool[Math.floor(Math.random() * pool.length)] } : null;
+  }
+
+  // A shared link carries the whole prompt: ?w=연필,치킨&r=length:150&c=pov:2인칭,mood:공포
+  function readLink() {
+    const params = new URLSearchParams(location.search);
+    const nouns = (params.get('w') || '').split(',').map(word => word.trim().normalize('NFC')).filter(Boolean);
+    if (nouns.length !== 2 || nouns[0] === nouns[1] || !nouns.every(word => gulgamWords.nouns.includes(word))) return null;
+    const [type, value] = (params.get('r') || '').split(':');
+    const conditions = {};
+    for (const pair of (params.get('c') || '').split(',')) {
+      const [key, chosen] = pair.split(':');
+      if (key && chosen) conditions[key] = chosen;
+    }
+    return {
+      nouns,
+      rule: validRule({ type, value: type === 'ban' ? (value || '').normalize('NFC') : Number(value) }),
+      conditions: validConditions(conditions)
+    };
+  }
+
+  function missionUrl() {
+    const parts = ['w=' + promptNouns.join(',')];
+    if (rule) parts.push('r=' + rule.type + ':' + rule.value);
+    const chosen = conditionKeys.filter(key => conditions[key]).map(key => key + ':' + conditions[key]);
+    if (chosen.length) parts.push('c=' + chosen.join(','));
+    return location.origin + location.pathname + '?' + parts.join('&');
+  }
+
   function readPrompt(record) {
     const [savedFirst, savedSecond] = Array.isArray(record.nounIds) ? record.nounIds : [record.nounId];
     const first = gulgamWords.nouns.includes(savedFirst) ? rememberNoun(savedFirst) : pickNoun();
@@ -112,8 +173,24 @@
   let lastEditTime = modifiedTime(draft);
   let recoverableText = draft.text || '';
   let promptNouns = readPrompt(draft);
+  let rule = validRule(draft.rule);
+  let conditions = validConditions(draft.conditions);
+  const linked = readLink();
+  if (linked) {
+    // A received prompt replaces the saved one. Text being written stays, as with 다른 글감.
+    promptNouns = linked.nouns.map(rememberNoun);
+    rule = linked.rule;
+    conditions = linked.conditions;
+    history.replaceState(null, '', location.pathname);
+  }
   editor.value = draft.text || '';
   let writing = readWritingTime(draft);
+
+  // A time limit measures from the moment it is set, not from an older draft.
+  function restartClock() {
+    writing = { elapsedMs: 0, since: editor.value.trim() ? Date.now() : null, resumed: false };
+  }
+  if (linked?.rule?.type === 'timer') restartClock();
 
   function readWritingTime(record) {
     const saved = record.writingTime;
@@ -146,9 +223,14 @@
     return promptNouns.join(' · ');
   }
 
+  function missionSignature(nouns, savedRule, savedConditions) {
+    return JSON.stringify([nouns, savedRule, conditionKeys.map(key => savedConditions[key] || '')]);
+  }
+
   function sameSavedPrompt(record) {
-    return record.version === 2 && Array.isArray(record.nounIds) && record.nounIds.length === 2
-      && promptNouns.every((noun, index) => noun === record.nounIds[index]);
+    return (record.version === 2 || record.version === 3) && Array.isArray(record.nounIds) && record.nounIds.length === 2
+      && missionSignature(record.nounIds, validRule(record.rule), validConditions(record.conditions))
+        === missionSignature(promptNouns, rule, conditions);
   }
 
   const saveMessages = {
@@ -168,7 +250,7 @@
   function saveDraft() {
     lastEditTime = Math.max(Date.now(), lastEditTime + 1);
     const serialized = JSON.stringify({
-      version: 2, nounIds: promptNouns,
+      version: 3, nounIds: promptNouns, rule, conditions,
       text: editor.value, writingTime: writing, updatedAt: new Date(lastEditTime).toISOString()
     });
     try {
@@ -207,21 +289,80 @@
     return promptNouns.filter(word => !text.includes(word));
   }
 
+  const characterCount = () => Array.from(editor.value).length;
+
+  function ruleBroken() {
+    if (!rule) return false;
+    if (rule.type === 'length') return characterCount() > rule.value;
+    if (rule.type === 'ban') return editor.value.normalize('NFC').includes(rule.value);
+    return false;
+  }
+
+  // The clock starts with the first keystroke and never locks the writer out:
+  // an overrun is printed on the slip instead.
+  function timerState() {
+    if (!rule || rule.type !== 'timer') return null;
+    const remaining = rule.value * 60000 - elapsedMs();
+    return { remaining, over: remaining <= 0 };
+  }
+
+  function timerDisplay(timer) {
+    if (timer.over) return '시간 종료';
+    const seconds = Math.ceil(timer.remaining / 1000);
+    return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+  }
+
+  const ruleLabel = () => rule ? ruleKinds[rule.type].label(rule.value) : '';
+  const conditionLabels = () => conditionKeys.map(key => conditions[key]).filter(Boolean);
+
+  function renderMission() {
+    const timer = timerState();
+    const chips = [];
+    if (rule) {
+      chips.push({
+        text: timer ? ruleLabel() + ' · ' + timerDisplay(timer) : ruleLabel(),
+        kind: 'rule', used: timer ? (timer.over ? 'over' : 'ticking') : String(!ruleBroken())
+      });
+    }
+    for (const value of conditionLabels()) chips.push({ text: value, kind: 'condition' });
+    const signature = JSON.stringify(chips);
+    for (const line of missionLines) {
+      line.hidden = chips.length === 0;
+      if (line.dataset.signature === signature) continue;
+      line.dataset.signature = signature;
+      line.replaceChildren(...chips.map(chip => {
+        const span = document.createElement('span');
+        span.textContent = chip.text;
+        span.dataset.chip = chip.kind;
+        if (chip.used) span.dataset.used = chip.used;
+        return span;
+      }));
+    }
+  }
+
   function renderEditor() {
-    element('word-count').textContent = Array.from(editor.value).length.toLocaleString('ko-KR') + '자';
+    const count = characterCount();
+    element('word-count').textContent = count.toLocaleString('ko-KR') + '자';
     const empty = !editor.value.trim();
     for (const button of draftActions) button.disabled = empty;
     const missing = missingPromptWords();
-    for (const button of printButtons) button.disabled = missing.length > 0;
+    const broken = ruleBroken();
+    for (const button of printButtons) button.disabled = missing.length > 0 || broken;
     promptLabels.forEach((label, index) => {
       const word = promptNouns[index];
       if (label.textContent !== word) label.textContent = word;
       const used = String(!missing.includes(word));
       if (label.dataset.used !== used) label.dataset.used = used;
     });
-    const progress = missing.length ? '남은 글감 ' + missing.join(', ') : '두 단어를 모두 썼어요. 글을 뽑을 수 있어요.';
+    let progress;
+    if (missing.length) progress = '남은 글감 ' + missing.join(', ');
+    else if (broken && rule.type === 'length') progress = rule.value + '자를 넘었어요. 지금 ' + count + '자';
+    else if (broken) progress = '‘' + rule.value + '’ 없이 써야 뽑을 수 있어요.';
+    else progress = '두 단어를 모두 썼어요. 글을 뽑을 수 있어요.';
+    if (timerState()?.over) progress = '시간이 다 됐어요. ' + progress;
     if (promptProgress.textContent !== progress) promptProgress.textContent = progress;
     for (const label of lineCounters) label.textContent = editor.value ? String(editor.value.split('\n').length) : '0';
+    renderMission();
     updateCarriage();
   }
 
@@ -251,7 +392,11 @@
     lastEditTime = Math.max(lastEditTime, modifiedTime(latest));
     writing = readWritingTime(latest);
     recoverableText = latest.text;
-    if (!sameSavedPrompt(latest)) promptNouns = readPrompt(latest);
+    if (!sameSavedPrompt(latest)) {
+      promptNouns = readPrompt(latest);
+      rule = validRule(latest.rule);
+      conditions = validConditions(latest.conditions);
+    }
     if (editor.value !== latest.text) editor.value = latest.text;
     renderEditor();
     if (sameSavedPrompt(latest)) showSaveStatus(storage);
@@ -644,6 +789,7 @@
 
   element('reroll').addEventListener('click', () => {
     promptNouns = [pickNoun(), pickNoun()];
+    if (rule?.type === 'ban' && promptNouns.some(noun => noun.includes(rule.value) || rule.value.includes(noun))) rule = drawRule('ban');
     renderEditor();
     saveDraft();
     if (document.body.dataset.view === 'receipt') {
@@ -676,8 +822,19 @@
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
+  function receiptRuleText() {
+    if (!rule) return '';
+    return ruleLabel() + (timerState()?.over ? ' · 시간 초과' : ' ✓');
+  }
+
   function renderReceipt(animate = false) {
     element('receipt-text').textContent = editor.value;
+    const ruleLine = element('receipt-rule');
+    const conditionLine = element('receipt-conditions');
+    ruleLine.textContent = receiptRuleText();
+    ruleLine.hidden = !rule;
+    conditionLine.textContent = conditionLabels().join(' · ');
+    conditionLine.hidden = conditionLabels().length === 0;
     if (consoleReceipt) {
       element('receipt-word-1').textContent = promptNouns[0];
       element('receipt-word-2').textContent = promptNouns[1];
@@ -693,7 +850,7 @@
   }
 
   element('pull').addEventListener('click', () => {
-    if (document.body.dataset.view !== 'write' || composing || missingPromptWords().length) return;
+    if (document.body.dataset.view !== 'write' || composing || missingPromptWords().length || ruleBroken()) return;
     editor.blur();
     writing.elapsedMs = elapsedMs();
     writing.since = null;
@@ -710,6 +867,30 @@
     editor.focus({ preventScroll: true });
   });
 
+  // Without clipboard permission a visible selection lets the device copy it.
+  function copyBySelection(field, text, trigger) {
+    if (!field) {
+      showToast('본문을 선택한 뒤 기기의 복사 기능을 사용해 주세요.');
+      return false;
+    }
+    const fallback = field === element('copy-fallback');
+    if (fallback) {
+      field.hidden = false;
+      field.value = text;
+    }
+    field.focus();
+    field.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch { /* Keep the selection available. */ }
+    if (copied) {
+      if (fallback) field.hidden = true;
+      if (trigger?.getClientRects().length) trigger.focus();
+    } else {
+      showToast('선택된 글을 기기의 복사 기능으로 복사해 주세요.');
+    }
+    return copied;
+  }
+
   async function copyText(trigger) {
     const text = editor.value;
     if (!text) return;
@@ -719,39 +900,238 @@
       return;
     } catch { /* Browsers without clipboard permission can copy a selection. */ }
     const onReceipt = document.body.dataset.view === 'receipt';
-    const field = onReceipt ? element('copy-fallback') : editor;
-    if (!field) {
-      showToast('본문을 선택한 뒤 기기의 복사 기능을 사용해 주세요.');
-      return;
-    }
-    if (onReceipt) {
-      field.hidden = false;
-      field.value = text;
-    }
-    field.focus();
-    field.select();
-    let copied = false;
-    try { copied = document.execCommand('copy'); } catch { /* Keep the selection available. */ }
-    if (copied) {
-      if (onReceipt) field.hidden = true;
-      if (trigger.getClientRects().length) trigger.focus();
-      showToast('글을 복사했어요.');
-    } else {
-      showToast('선택된 글을 기기의 복사 기능으로 복사해 주세요.');
-    }
+    if (copyBySelection(onReceipt ? element('copy-fallback') : editor, text, trigger)) showToast('글을 복사했어요.');
   }
 
-  function downloadText() {
-    if (!editor.value) return;
-    const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
+  function downloadBlob(blob, name) {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = 'GULGAM-' + promptNouns.join('-') + '.txt';
+    link.download = name;
     document.body.append(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  function downloadText() {
+    if (!editor.value) return;
+    downloadBlob(new Blob([editor.value], { type: 'text/plain;charset=utf-8' }), 'GULGAM-' + promptNouns.join('-') + '.txt');
+  }
+
+  // A phone gets the system share sheet; a desktop gets the link or the file.
+  const touchSharing = () => matchMedia('(pointer: coarse)').matches;
+
+  async function shareMission(trigger) {
+    const url = missionUrl();
+    const text = wordPair() + (rule ? ' · ' + ruleLabel() : '') + ' — 이 글감으로 글 써볼래?';
+    if (navigator.share && touchSharing()) {
+      try {
+        await navigator.share({ title: 'GULGAM 글감', text, url });
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('글감 링크를 복사했어요. 친구에게 보내 보세요.');
+      return;
+    } catch { /* Fall back to a visible selection. */ }
+    if (copyBySelection(element('copy-fallback'), url, trigger)) showToast('글감 링크를 복사했어요.');
+  }
+
+  function wrapLines(context, text, maxWidth) {
+    const lines = [];
+    for (const paragraph of text.split('\n')) {
+      let line = '';
+      for (const word of paragraph.split(' ')) {
+        const candidate = line ? line + ' ' + word : word;
+        if (context.measureText(candidate).width <= maxWidth) {
+          line = candidate;
+          continue;
+        }
+        if (line) lines.push(line);
+        let piece = '';
+        for (const glyph of word) {
+          if (piece && context.measureText(piece + glyph).width > maxWidth) {
+            lines.push(piece);
+            piece = '';
+          }
+          piece += glyph;
+        }
+        line = piece;
+      }
+      lines.push(line);
+    }
+    return lines;
+  }
+
+  function slipPath(context, x, y, width, height, tooth) {
+    context.beginPath();
+    context.moveTo(x, y);
+    for (let edge = x; edge < x + width; edge += tooth * 2) {
+      context.lineTo(Math.min(edge + tooth, x + width), y + tooth);
+      context.lineTo(Math.min(edge + tooth * 2, x + width), y);
+    }
+    context.lineTo(x + width, y + height);
+    for (let edge = x + width; edge > x; edge -= tooth * 2) {
+      context.lineTo(Math.max(edge - tooth, x), y + height - tooth);
+      context.lineTo(Math.max(edge - tooth * 2, x), y + height);
+    }
+    context.closePath();
+  }
+
+  function dashedLine(context, from, to, y) {
+    context.save();
+    context.strokeStyle = '#c6c1b7';
+    context.lineWidth = 2;
+    context.setLineDash([3, 9]);
+    context.beginPath();
+    context.moveTo(from, y);
+    context.lineTo(to, y);
+    context.stroke();
+    context.restore();
+  }
+
+  // The receipt is the share card: one slip, 1080 wide, at least 4:5 tall.
+  async function drawReceiptImage() {
+    const sans = '"Noto Sans KR", sans-serif';
+    const latin = 'Poppins, "Noto Sans KR", sans-serif';
+    await Promise.all(['400 38px "Noto Sans KR"', '500 46px Poppins', '700 46px Poppins']
+      .map(font => document.fonts.load(font).catch(() => null)));
+    const width = 1080;
+    const margin = 72;
+    const inset = 64;
+    const slipWidth = width - margin * 2;
+    const left = margin + inset;
+    const right = width - margin - inset;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    const bodyFont = '400 38px ' + sans;
+    const bodyLine = 62;
+    context.font = bodyFont;
+    let lines = wrapLines(context, editor.value.replace(/\s+$/, ''), right - left);
+    const maxLines = 34;
+    const clipped = lines.length > maxLines;
+    if (clipped) lines = lines.slice(0, maxLines);
+    const metaLines = [receiptRuleText(), conditionLabels().join(' · ')].filter(Boolean);
+    const blocks = {
+      header: 128, nouns: promptNouns.length * 84 + 12, meta: metaLines.length * 44 + (metaLines.length ? 12 : 0),
+      body: lines.length * bodyLine + (clipped ? 52 : 0) + 24, footer: 104
+    };
+    const slipHeight = inset * 2 + blocks.header + blocks.nouns + blocks.meta + blocks.body + blocks.footer + 36 * 3;
+    const height = Math.max(1350, slipHeight + margin * 2);
+    canvas.width = width;
+    canvas.height = height;
+    const top = Math.round((height - slipHeight) / 2);
+    context.fillStyle = '#e4e0d8';
+    context.fillRect(0, 0, width, height);
+    slipPath(context, margin, top, slipWidth, slipHeight, 14);
+    context.save();
+    context.shadowColor = 'rgba(0, 0, 0, .14)';
+    context.shadowBlur = 28;
+    context.shadowOffsetY = 10;
+    context.fillStyle = '#fff';
+    context.fill();
+    context.restore();
+
+    const ink = '#111';
+    const muted = '#6f6b64';
+    let y = top + inset + 50;
+    context.fillStyle = ink;
+    context.textBaseline = 'alphabetic';
+    context.font = '500 46px ' + latin;
+    context.fillText('gul', left, y);
+    const gulWidth = context.measureText('gul').width;
+    context.font = '700 46px ' + latin;
+    context.fillText('gam', left + gulWidth, y);
+    context.textAlign = 'right';
+    context.fillStyle = muted;
+    context.font = '500 26px ' + sans;
+    context.fillText('글 영수증', right, y - 4);
+    context.font = '400 24px ' + sans;
+    context.fillText(displayDate(), right, y + 40);
+    context.textAlign = 'left';
+    y = top + inset + blocks.header;
+    dashedLine(context, left, right, y);
+
+    y += 36;
+    context.fillStyle = ink;
+    context.font = '400 68px ' + sans;
+    for (const noun of promptNouns) {
+      y += 72;
+      context.fillText(noun, left, y);
+      y += 12;
+    }
+    context.fillStyle = muted;
+    context.font = '500 28px ' + sans;
+    for (const line of metaLines) {
+      y += 40;
+      context.fillText(line, left, y);
+      y += 4;
+    }
+    y += metaLines.length ? 24 : 12;
+    dashedLine(context, left, right, y);
+
+    y += 36;
+    context.fillStyle = ink;
+    context.font = bodyFont;
+    for (const line of lines) {
+      y += 46;
+      context.fillText(line, left, y);
+      y += bodyLine - 46;
+    }
+    if (clipped) {
+      y += 40;
+      context.fillStyle = muted;
+      context.font = '400 26px ' + sans;
+      context.fillText('(이어지는 글은 글감에서)', left, y);
+      y += 12;
+    }
+    y += 24;
+    dashedLine(context, left, right, y);
+
+    y += 70;
+    context.fillStyle = muted;
+    context.font = '500 26px ' + sans;
+    context.fillText(displayWritingTime() + ' · ' + characterCount().toLocaleString('ko-KR') + '자', left, y);
+    context.textAlign = 'right';
+    context.fillStyle = ink;
+    context.font = '500 26px ' + latin;
+    context.fillText(location.host, right, y);
+    context.textAlign = 'left';
+    y += 40;
+    context.fillStyle = muted;
+    context.font = '400 22px ' + sans;
+    context.fillText('무작위 두 단어로 쓴 짧은 글', left, y);
+    return canvas;
+  }
+
+  async function shareReceiptImage(trigger) {
+    if (!editor.value.trim()) return;
+    let blob = null;
+    try {
+      const canvas = await drawReceiptImage();
+      blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    } catch { /* Reported below. */ }
+    if (!blob) {
+      showToast('영수증 이미지를 만들지 못했어요.');
+      return;
+    }
+    const name = 'GULGAM-' + promptNouns.join('-') + '.png';
+    const file = new File([blob], name, { type: 'image/png' });
+    if (touchSharing() && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'GULGAM 글 영수증', text: wordPair() + ' · 글감에서 쓴 글 ' + missionUrl() });
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+      }
+    }
+    downloadBlob(blob, name);
+    showToast('영수증 이미지를 저장했어요. 사진첩이나 SNS에 올려 보세요.');
+    if (trigger?.getClientRects().length) trigger.focus();
   }
 
   element('copy').addEventListener('click', event => copyText(event.currentTarget));
@@ -803,12 +1183,14 @@
     }
   }
 
-  for (const name of ['settings', 'tools']) {
+  for (const name of ['settings', 'tools', 'mission']) {
     const dialog = element(name + '-dialog');
     if (!dialog) continue;
     for (const button of all('[data-open-' + name + ']')) {
       button.addEventListener('click', () => {
-        if (!dialog.open) dialog.showModal();
+        if (dialog.open) return;
+        dialog.dispatchEvent(new Event('gulgam:open'));
+        dialog.showModal();
       });
     }
     for (const close of dialog.querySelectorAll('[data-close-dialog]')) {
@@ -827,6 +1209,8 @@
       button.closest('dialog')?.close();
       if (action === 'copy') copyText(button);
       else if (action === 'download') downloadText();
+      else if (action === 'share-mission') shareMission(button);
+      else if (action === 'share-image') shareReceiptImage(button);
       else if (['reroll', 'pull', 'back'].includes(action) && button !== element(action)) element(action).click();
     });
   }
@@ -860,12 +1244,70 @@
     }
   });
 
+  let timerDone = false;
+  if (missionDialog) {
+    const ruleSelect = missionDialog.querySelector('[data-mission-rule]');
+    const ruleValue = missionDialog.querySelector('[data-mission-value]');
+    const ruleText = missionDialog.querySelector('[data-rule-value]');
+    const redraw = missionDialog.querySelector('[data-redraw-rule]');
+    const conditionSelects = all('[data-mission-condition]');
+    for (const select of conditionSelects) {
+      for (const value of gulgamWords.conditions[select.dataset.missionCondition] || []) {
+        select.append(new Option(value, value));
+      }
+    }
+    const renderMissionDialog = () => {
+      ruleSelect.value = rule ? rule.type : '';
+      ruleValue.hidden = !rule;
+      ruleText.textContent = ruleLabel();
+      for (const select of conditionSelects) select.value = conditions[select.dataset.missionCondition] || '';
+    };
+    const commitMission = () => {
+      timerDone = false;
+      renderEditor();
+      saveDraft();
+      renderMissionDialog();
+    };
+    missionDialog.addEventListener('gulgam:open', renderMissionDialog);
+    ruleSelect.addEventListener('change', () => {
+      rule = drawRule(ruleSelect.value);
+      if (rule?.type === 'timer') restartClock();
+      commitMission();
+    });
+    redraw.addEventListener('click', () => {
+      if (rule) rule = drawRule(rule.type, rule.value);
+      if (rule?.type === 'timer') restartClock();
+      commitMission();
+    });
+    for (const select of conditionSelects) {
+      select.addEventListener('change', () => {
+        const next = { ...conditions };
+        if (select.value) next[select.dataset.missionCondition] = select.value;
+        else delete next[select.dataset.missionCondition];
+        conditions = validConditions(next);
+        commitMission();
+      });
+    }
+  }
+
+  // When the time is up and the prompt is met, the slip pulls itself.
+  setInterval(() => {
+    const timer = timerState();
+    if (!timer || document.body.dataset.view !== 'write') return;
+    renderEditor();
+    if (timer.over && !timerDone && !composing && !element('pull').disabled) {
+      timerDone = true;
+      element('pull').click();
+    }
+  }, 1000);
+
   if (element('paper-date')) element('paper-date').textContent = displayDate();
   renderTheme();
   renderSoundState();
   renderEditor();
   if (sameSavedPrompt(draft) && (draft.writingTime || !draft.text.trim())) showSaveStatus(initial.storage);
   else saveDraft();
+  if (linked) showToast('받은 글감으로 시작해요. ' + wordPair());
   const desktopWriter = consoleReceipt
     ? navigator.maxTouchPoints === 0 || matchMedia('(hover: hover) and (pointer: fine)').matches
     : matchMedia('(min-width: 651px) and (pointer: fine)').matches;

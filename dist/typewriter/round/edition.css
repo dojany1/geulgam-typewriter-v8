@@ -68,21 +68,25 @@ body[data-edition="typewriter"] {
   align-items: flex-start; justify-content: space-between;
   gap: 12px; min-height: 0; height: auto; margin: 0;
 }
+.prompt { min-width: 0; }
 .prompt-label {
-  display: block;
   color: var(--muted);
   font: 500 10px/1.3 var(--text-font);
 }
+.prompt .mission-line { margin-left: .5em; font: 500 10px/1.3 var(--text-font); }
 .prompt #words {
   margin: 5px 0 0;
   color: var(--fg);
 }
-.context-bar #reroll {
-  flex: none; min-height: 29px; gap: 5px; padding-inline: 4px; margin: -4px -4px 0 0;
+.prompt-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: none; margin: -4px -4px 0 0; }
+.prompt-actions button {
+  min-height: 24px; gap: 5px; padding-inline: 4px;
   color: var(--muted); font-size: 10px;
 }
-.context-bar #reroll svg { width: 13px; height: 13px; }
-.context-bar #reroll:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+.prompt-actions svg { width: 13px; height: 13px; }
+.prompt-actions button:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+.receipt-rule, .receipt-conditions { margin-top: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.receipt-rule + .receipt-conditions { margin-top: 2px; }
 .paper-sheet #editor {
   display: block; position: absolute;
   inset: 0 var(--sheet-inset) 10px;
@@ -344,7 +348,7 @@ body[data-edition="typewriter"] {
   }
   .context-bar { inset-block-start: 12%; }
   .prompt #words { margin-top: 4px; }
-  .context-bar #reroll { min-height: 28px; }
+  .prompt-actions button { min-height: 22px; }
   .write-guide { inset-inline: -2%; }
   .platen { height: 19px; }
   .platen-wheel { height: 19px; }
@@ -367,8 +371,9 @@ body[data-edition="typewriter"] {
   .topnav .logotype { font-size: 19px; }
   .nav-links { gap: 8px; white-space: nowrap; }
   .context-bar { gap: 3px; }
-  .context-bar #reroll { align-self: start; min-width: 27px; justify-content: center; }
-  .context-bar #reroll span { display: none; }
+  .prompt-actions { align-self: start; }
+  .prompt-actions button { min-width: 27px; justify-content: center; }
+  .prompt-actions button span { display: none; }
   .keyboard { --row-gap: 4px; }
   .keyboard [data-code="Lang1"] .key-name { font-size: 0; }
   .keyboard[data-layout="ko"] .hangul-mode, .keyboard[data-layout="en"] .latin-mode { font-size: 10px; }

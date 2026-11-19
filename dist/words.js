@@ -1,4 +1,6 @@
-// Keep the Korean headwords themselves as stable identifiers for saved drafts.
+// Keep the Korean headwords themselves as stable identifiers for saved drafts
+// and shared links. The lists below are the only values a rule or a condition
+// may take, so a link can be checked against them.
 const gulgamWords = {
   nouns: [
     '우산', '편지', '단추', '열쇠', '연필', '수첩', '봉투', '거울', '시계', '성냥',
@@ -12,5 +14,15 @@ const gulgamWords = {
     '이웃', '친구', '누나', '동생', '손님', '선생님', '점원', '화가', '우체부', '여행자',
     '약속', '기억', '소문', '침묵', '비밀', '꿈', '방학', '이별', '휴일', '기척',
     '첫눈', '새벽', '마중', '농담', '생일', '여름', '낮잠', '작별', '부탁', '대답'
-  ]
+  ],
+  // Rules the app judges: a character limit, a time limit, or a banned word.
+  lengths: [100, 150, 200, 300],
+  minutes: [3, 5, 10],
+  banned: ['그리고', '그래서', '하지만', '너무', '정말', '진짜', '갑자기', '마음', '행복', '사랑'],
+  // Conditions are printed on the receipt only; the reader judges them.
+  conditions: {
+    pov: ['1인칭', '2인칭', '전지적'],
+    mood: ['공포', '유머', '쓸쓸함', '설렘', '분노', '평온', '미스터리', '몽환'],
+    form: ['대화문', '장면 묘사']
+  }
 };
