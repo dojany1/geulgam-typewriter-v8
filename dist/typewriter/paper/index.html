@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="타자기에 종이를 끼우고, 두 단어에서 시작하는 나만의 글을 써보세요.">
+  <meta name="description" content="무작위로 뽑힌 두 명사를 모두 넣어 짧은 글을 쓰고 영수증으로 뽑는 글감 타자기.">
   <title>글감 타자기 · GULGAM</title>
   <link rel="icon" href="../../assets/mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../common.css">
+  <link rel="stylesheet" href="../../common.css?v=3">
   <link rel="stylesheet" href="edition.css">
   <link rel="stylesheet" href="receipt.css">
   <link rel="preload" as="image" href="../../assets/typewriter.webp">
-  <script defer src="../../words.js"></script>
-  <script defer src="../../app.js"></script>
+  <script defer src="../../words.js?v=3"></script>
+  <script defer src="../../app.js?v=3"></script>
 </head>
 <body class="edition" data-view="write" data-edition="typewriter">
   <svg aria-hidden="true" class="icon-library" xmlns="http://www.w3.org/2000/svg">
@@ -41,10 +41,11 @@
         <div class="paper">
           <div class="paper-heading"><span>오늘의 글감</span><span id="paper-date"></span></div>
           <div class="word-line">
-            <h1 id="words" aria-live="polite"></h1>
+            <h1 id="words"><span data-prompt-word></span> · <span data-prompt-word></span></h1>
+            <span id="prompt-progress" class="visually-hidden" role="status" aria-atomic="true"></span>
             <button id="reroll" type="button" title="글감 다시 뽑기" aria-label="글감 다시 뽑기"><svg aria-hidden="true"><use href="#i-roll"/></svg><span>다시 뽑기</span></button>
           </div>
-          <div class="paper-lines"><textarea id="editor" spellcheck="false" rows="4" aria-label="나의 글" placeholder="두 단어로 자유롭게 써보세요."></textarea></div>
+          <div class="paper-lines"><textarea id="editor" spellcheck="false" rows="4" aria-label="나의 글" aria-describedby="words prompt-progress" placeholder="두 단어를 넣어 자유롭게 써보세요."></textarea></div>
           <div class="paper-info"><span id="save-status" role="status"></span><span id="word-count">0자</span></div>
         </div>
         <div class="machine-window" aria-hidden="true">

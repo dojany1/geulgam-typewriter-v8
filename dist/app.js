@@ -8,7 +8,10 @@
   const roundKeys = document.body.dataset.keyShape === 'round';
   const soundButtons = all('#sound, [data-sound-toggle]');
   const soundLabels = all('[data-sound-label]');
-  const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="pull"]');
+  const draftActions = all('[data-action="copy"], [data-action="download"]');
+  const printButtons = all('#pull, [data-action="pull"]');
+  const promptLabels = all('#words [data-prompt-word]');
+  const promptProgress = element('prompt-progress');
   const lineCounters = all('[data-line-count]');
   const draftStates = all('[data-draft-state]');
   const draftKey = 'gulgam.draft.v1';
@@ -16,7 +19,6 @@
   const soundKey = typewriter ? 'gulgam.sound.v1' : 'gulgam.original.sound.v1';
   const themeKey = 'gulgam.theme.v1';
   const recentNouns = [];
-  const recentAdjectives = [];
   const carriage = document.querySelector('[data-carriage]');
   let toastTimer;
   let composing = false;
@@ -64,16 +66,27 @@
     }
   }
 
-  function remember(recent, word) {
-    recent.push(word);
-    if (recent.length > 5) recent.shift();
+  function rememberNoun(word) {
+    recentNouns.push(word);
+    if (recentNouns.length > 10) recentNouns.shift();
     return word;
   }
 
-  function pick(list, recent) {
-    const available = list.filter(word => !recent.includes(word));
-    const word = available[Math.floor(Math.random() * available.length)];
-    return remember(recent, word);
+  function pickNoun() {
+    const available = gulgamWords.nouns.filter(word => !recentNouns.includes(word));
+    return rememberNoun(available[Math.floor(Math.random() * available.length)]);
+  }
+
+  function readPrompt(record) {
+    const [savedFirst, savedSecond] = Array.isArray(record.nounIds) ? record.nounIds : [record.nounId];
+    const first = gulgamWords.nouns.includes(savedFirst) ? rememberNoun(savedFirst) : pickNoun();
+    if (savedSecond !== first && gulgamWords.nouns.includes(savedSecond)) {
+      return [first, rememberNoun(savedSecond)];
+    }
+    // Give an existing draft credit for a second noun its author already used.
+    const text = (record.text || '').normalize('NFC');
+    const inDraft = gulgamWords.nouns.find(word => word !== first && text.includes(word));
+    return [first, inDraft ? rememberNoun(inDraft) : pickNoun()];
   }
 
   function displayDate(date = new Date()) {
@@ -98,10 +111,7 @@
   const draft = initial.record || {};
   let lastEditTime = modifiedTime(draft);
   let recoverableText = draft.text || '';
-  let noun = gulgamWords.nouns.includes(draft.nounId)
-    ? remember(recentNouns, draft.nounId) : pick(gulgamWords.nouns, recentNouns);
-  let adjective = gulgamWords.adjectives.includes(draft.adjectiveId)
-    ? remember(recentAdjectives, draft.adjectiveId) : pick(gulgamWords.adjectives, recentAdjectives);
+  let promptNouns = readPrompt(draft);
   editor.value = draft.text || '';
   let writing = readWritingTime(draft);
 
@@ -133,7 +143,12 @@
   }
 
   function wordPair() {
-    return noun + ' · ' + adjective;
+    return promptNouns.join(' · ');
+  }
+
+  function sameSavedPrompt(record) {
+    return record.version === 2 && Array.isArray(record.nounIds) && record.nounIds.length === 2
+      && promptNouns.every((noun, index) => noun === record.nounIds[index]);
   }
 
   const saveMessages = {
@@ -153,7 +168,7 @@
   function saveDraft() {
     lastEditTime = Math.max(Date.now(), lastEditTime + 1);
     const serialized = JSON.stringify({
-      version: 1, nounId: noun, adjectiveId: adjective,
+      version: 2, nounIds: promptNouns,
       text: editor.value, writingTime: writing, updatedAt: new Date(lastEditTime).toISOString()
     });
     try {
@@ -187,14 +202,26 @@
     }
   });
 
+  function missingPromptWords() {
+    const text = editor.value.normalize('NFC');
+    return promptNouns.filter(word => !text.includes(word));
+  }
+
   function renderEditor() {
     element('word-count').textContent = Array.from(editor.value).length.toLocaleString('ko-KR') + '자';
     const empty = !editor.value.trim();
-    element('pull').disabled = empty;
     for (const button of draftActions) button.disabled = empty;
+    const missing = missingPromptWords();
+    for (const button of printButtons) button.disabled = missing.length > 0;
+    promptLabels.forEach((label, index) => {
+      const word = promptNouns[index];
+      if (label.textContent !== word) label.textContent = word;
+      const used = String(!missing.includes(word));
+      if (label.dataset.used !== used) label.dataset.used = used;
+    });
+    const progress = missing.length ? '남은 글감 ' + missing.join(', ') : '두 단어를 모두 썼어요. 글을 뽑을 수 있어요.';
+    if (promptProgress.textContent !== progress) promptProgress.textContent = progress;
     for (const label of lineCounters) label.textContent = editor.value ? String(editor.value.split('\n').length) : '0';
-    const words = element('words');
-    if (words.textContent !== wordPair()) words.textContent = wordPair();
     updateCarriage();
   }
 
@@ -217,21 +244,20 @@
     if (composing || document.body.dataset.draftStorage === 'memory') return;
     const { record: latest, storage } = readDraft();
     if (!latest) return;
-    if (modifiedTime(latest) === lastEditTime && editor.value === latest.text
-        && noun === latest.nounId && adjective === latest.adjectiveId) {
+    if (modifiedTime(latest) === lastEditTime && editor.value === latest.text && sameSavedPrompt(latest)) {
       showSaveStatus(storage);
       return;
     }
     lastEditTime = Math.max(lastEditTime, modifiedTime(latest));
     writing = readWritingTime(latest);
     recoverableText = latest.text;
-    if (gulgamWords.nouns.includes(latest.nounId) && noun !== latest.nounId) noun = remember(recentNouns, latest.nounId);
-    if (gulgamWords.adjectives.includes(latest.adjectiveId) && adjective !== latest.adjectiveId) adjective = remember(recentAdjectives, latest.adjectiveId);
+    if (!sameSavedPrompt(latest)) promptNouns = readPrompt(latest);
     if (editor.value !== latest.text) editor.value = latest.text;
     renderEditor();
-    showSaveStatus(storage);
+    if (sameSavedPrompt(latest)) showSaveStatus(storage);
+    else saveDraft();
     if (document.body.dataset.view === 'receipt') {
-      if (editor.value.trim()) renderReceipt();
+      if (!element('pull').disabled) renderReceipt();
       else setView('write');
     }
   }
@@ -617,8 +643,7 @@
   });
 
   element('reroll').addEventListener('click', () => {
-    noun = pick(gulgamWords.nouns, recentNouns);
-    adjective = pick(gulgamWords.adjectives, recentAdjectives);
+    promptNouns = [pickNoun(), pickNoun()];
     renderEditor();
     saveDraft();
     if (document.body.dataset.view === 'receipt') {
@@ -654,8 +679,8 @@
   function renderReceipt(animate = false) {
     element('receipt-text').textContent = editor.value;
     if (consoleReceipt) {
-      element('receipt-noun').textContent = noun;
-      element('receipt-adjective').textContent = adjective;
+      element('receipt-word-1').textContent = promptNouns[0];
+      element('receipt-word-2').textContent = promptNouns[1];
       element('receipt-elapsed').textContent = displayWritingTime();
       document.dispatchEvent(new CustomEvent('gulgam:receipt', {
         detail: { text: editor.value, animate, playSound: kind => playSound(kind, 'receipt') }
@@ -668,7 +693,7 @@
   }
 
   element('pull').addEventListener('click', () => {
-    if (document.body.dataset.view !== 'write' || !editor.value.trim()) return;
+    if (document.body.dataset.view !== 'write' || composing || missingPromptWords().length) return;
     editor.blur();
     writing.elapsedMs = elapsedMs();
     writing.since = null;
@@ -722,7 +747,7 @@
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = 'GULGAM-' + noun + '-' + adjective + '.txt';
+    link.download = 'GULGAM-' + promptNouns.join('-') + '.txt';
     document.body.append(link);
     link.click();
     link.remove();
@@ -839,8 +864,7 @@
   renderTheme();
   renderSoundState();
   renderEditor();
-  if (draft.text !== undefined && noun === draft.nounId && adjective === draft.adjectiveId
-      && (draft.writingTime || !draft.text.trim())) showSaveStatus(initial.storage);
+  if (sameSavedPrompt(draft) && (draft.writingTime || !draft.text.trim())) showSaveStatus(initial.storage);
   else saveDraft();
   const desktopWriter = consoleReceipt
     ? navigator.maxTouchPoints === 0 || matchMedia('(hover: hover) and (pointer: fine)').matches

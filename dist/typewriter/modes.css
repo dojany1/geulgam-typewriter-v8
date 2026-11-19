@@ -10,6 +10,16 @@
   color: var(--muted);
 }
 
+.draft-exports { display: none; }
+body:is([data-draft-storage="session"], [data-draft-storage="memory"]) .draft-exports {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px;
+}
+.draft-exports button {
+  min-height: 28px; color: var(--fg); white-space: nowrap;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.draft-exports button:disabled { opacity: .45; }
+
 @media (max-width: 480px) {
   .topnav .nav-links { gap: 8px; }
 }
