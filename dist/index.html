@@ -21,9 +21,9 @@
   <meta name="twitter:image" content="/assets/og.png">
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="common.css?v=4">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
   <script src="words.js?v=4" defer></script>
-  <script src="app.js?v=4" defer></script>
+  <script src="app.js?v=5" defer></script>
 </head>
 <body data-view="write" data-edition="original">
   <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -57,6 +57,7 @@
   </header>
   <main class="column workspace">
     <div class="context-bar">
+      <button type="button" data-open-pieces>뽑은 글</button>
       <button type="button" data-open-mission>글감 조건 <svg><use href="#rule-icon"/></svg></button>
       <button type="button" data-open-settings>글쓰기 설정 <svg><use href="#gear"/></svg></button>
       <a href="typewriter/">타자기 버전 <span class="play-arrow" aria-hidden="true"></span></a>
@@ -92,7 +93,7 @@
         <div id="receipt-text"></div>
       </div>
       <footer class="result-tools">
-        <button id="back" type="button">← 다시 쓰기</button><span id="receipt-length"></span>
+        <button id="back" type="button">← 다시 쓰기</button><span id="receipt-length"></span><span id="receipt-kept" class="receipt-kept"></span>
         <div class="result-exports"><button type="button" data-action="share-image">영수증 이미지</button><button type="button" data-action="share-mission">글감 보내기</button><button id="copy" type="button">글 복사</button><button id="download" type="button">TXT 저장</button></div>
       </footer>
     </section>
@@ -105,7 +106,14 @@
   </dialog>
   <dialog id="tools-dialog" aria-labelledby="tools-title">
     <div class="dialog-heading"><h2 id="tools-title">글 도구</h2><button data-close-dialog aria-label="도구 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>
-    <div class="tools-list"><button type="button" data-action="pull" disabled>글 뽑기</button><button type="button" data-action="share-mission">글감 보내기</button><button type="button" data-action="copy">글 복사</button><button type="button" data-action="download">TXT 저장</button></div>
+    <div class="tools-list"><button type="button" data-action="pull" disabled>글 뽑기</button><button type="button" data-open-pieces>뽑은 글</button><button type="button" data-action="share-mission">글감 보내기</button><button type="button" data-action="copy">글 복사</button><button type="button" data-action="download">TXT 저장</button></div>
+  </dialog>
+  <dialog id="pieces-dialog" aria-labelledby="pieces-title">
+    <div class="dialog-heading"><h2 id="pieces-title">뽑은 글</h2><button data-close-dialog aria-label="뽑은 글 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>
+    <p class="pieces-note">이 브라우저에만 남아요. 브라우저 데이터를 지우면 사라져요.</p>
+    <ul id="pieces-list" class="pieces-list"></ul>
+    <p id="pieces-empty" class="pieces-empty" hidden>아직 뽑은 글이 없어요. 글을 뽑으면 여기에 쌓여요.</p>
+    <div class="pieces-footer"><span id="pieces-count"></span><button type="button" data-export-pieces disabled>전부 TXT로 저장</button></div>
   </dialog>
   <dialog id="mission-dialog" aria-labelledby="mission-title">
     <div class="dialog-heading"><h2 id="mission-title">글감 조건</h2><button data-close-dialog aria-label="조건 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>

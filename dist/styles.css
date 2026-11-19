@@ -72,6 +72,23 @@ dialog::backdrop { background: rgb(0 0 0 / .23); }
 .mission-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -8px; padding-bottom: 10px; color: var(--muted); font-size: 12px; }
 .mission-value button { font-size: 12px; font-weight: 600; min-height: 28px; text-decoration: underline; text-underline-offset: 3px; }
 .mission-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.pieces-note, .pieces-empty { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.pieces-list { list-style: none; margin: 8px 0 0; padding: 0; max-height: min(52vh, 420px); overflow-y: auto; scrollbar-width: thin; }
+.piece-row { display: flex; align-items: flex-start; gap: 6px; border-top: 1px solid var(--line); }
+.piece-open { flex: 1; min-width: 0; display: block; padding: 10px 0; text-align: left; }
+.piece-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; line-height: 1.4; }
+.piece-date, .piece-meta { color: var(--muted); font-size: 11px; }
+.piece-excerpt { display: block; margin-top: 3px; font-size: 12px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.piece-open:hover .piece-excerpt { text-decoration: underline; text-underline-offset: 3px; }
+.piece-meta { display: block; margin-top: 3px; }
+.piece-delete { flex: none; min-height: 32px; margin-top: 7px; padding: 0 4px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.piece-delete:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+.pieces-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--fg); color: var(--muted); font-size: 12px; }
+.pieces-footer button { min-height: 32px; color: var(--fg); font-size: 12px; font-weight: 600; }
+.pieces-footer button:disabled { opacity: .45; }
+.pieces-footer button:not(:disabled):hover { text-decoration: underline; text-underline-offset: 3px; }
+.receipt-kept { color: var(--muted); font-size: 11px; }
+.result-tools .receipt-kept { padding-top: 1px; }
 .attribution .mission-line { margin-left: .4em; font-size: 12px; }
 .setting-buttons, .tools-list { display: flex; align-items: center; gap: 8px; }
 .setting-row button:hover { text-decoration: underline; }

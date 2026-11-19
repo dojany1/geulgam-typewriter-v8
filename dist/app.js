@@ -22,6 +22,9 @@
   const carriage = document.querySelector('[data-carriage]');
   const missionLines = all('[data-mission-line]');
   const missionDialog = element('mission-dialog');
+  const piecesDialog = element('pieces-dialog');
+  const piecesKey = 'gulgam.pieces.v1';
+  const pieceLimit = 200;
   let toastTimer;
   let composing = false;
 
@@ -212,10 +215,14 @@
     else if (writing.since === null) writing.since = Date.now();
   }
 
-  function displayWritingTime() {
-    const seconds = Math.floor(elapsedMs() / 1000);
+  function durationText(ms) {
+    const seconds = Math.floor(Math.max(0, ms) / 1000);
     const minutes = Math.floor(seconds / 60);
-    const duration = minutes ? minutes + '분 ' + String(seconds % 60).padStart(2, '0') + '초' : seconds + '초';
+    return minutes ? minutes + '분 ' + String(seconds % 60).padStart(2, '0') + '초' : seconds + '초';
+  }
+
+  function displayWritingTime() {
+    const duration = durationText(elapsedMs());
     return writing.resumed ? duration + ' (이어서 쓴 시간)' : duration;
   }
 
@@ -312,8 +319,10 @@
     return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
   }
 
-  const ruleLabel = () => rule ? ruleKinds[rule.type].label(rule.value) : '';
-  const conditionLabels = () => conditionKeys.map(key => conditions[key]).filter(Boolean);
+  const labelFor = saved => saved ? ruleKinds[saved.type].label(saved.value) : '';
+  const ruleLabel = () => labelFor(rule);
+  const conditionList = source => conditionKeys.map(key => source[key]).filter(Boolean);
+  const conditionLabels = () => conditionList(conditions);
 
   function renderMission() {
     const timer = timerState();
@@ -855,10 +864,12 @@
     writing.elapsedMs = elapsedMs();
     writing.since = null;
     saveDraft();
+    const kept = keepPiece();
     if (consoleReceipt) startAudio();
     else playSound('print');
     setView('receipt');
     renderReceipt(true);
+    showKept(kept);
     element('receipt-focus').focus({ preventScroll: true });
   });
 
@@ -1134,6 +1145,145 @@
     if (trigger?.getClientRects().length) trigger.focus();
   }
 
+  // Every pulled receipt is kept as a piece in this browser, newest first.
+  function readPieces() {
+    try {
+      const list = JSON.parse(localStorage.getItem(piecesKey));
+      return Array.isArray(list)
+        ? list.filter(piece => piece && typeof piece.id === 'string' && typeof piece.text === 'string' && Array.isArray(piece.nounIds))
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function writePieces(list) {
+    try {
+      localStorage.setItem(piecesKey, JSON.stringify(list));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const samePiece = (a, b) => a.text === b.text && a.nounIds.join(',') === b.nounIds.join(',');
+
+  function keepPiece() {
+    const piece = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      nounIds: promptNouns, rule, conditions, text: editor.value,
+      elapsedMs: writing.elapsedMs, resumed: writing.resumed, printedAt: new Date().toISOString()
+    };
+    // The same text pulled again stays one piece and moves to the top.
+    return writePieces([piece, ...readPieces().filter(saved => !samePiece(saved, piece))].slice(0, pieceLimit));
+  }
+
+  function showKept(kept) {
+    const status = element('receipt-kept');
+    if (status) status.textContent = kept ? '뽑은 글에 보관됨' : '뽑은 글에 보관하지 못했어요';
+    if (!kept) showToast('뽑은 글에 보관하지 못했어요. 글을 복사하거나 TXT로 저장해 주세요.');
+  }
+
+  function pieceDate(piece) {
+    const printed = new Date(piece.printedAt);
+    return displayDate(Number.isNaN(printed.getTime()) ? new Date() : printed);
+  }
+
+  function pieceExcerpt(text) {
+    const line = text.split('\n').map(part => part.trim()).find(Boolean) || '';
+    const glyphs = Array.from(line);
+    return glyphs.length > 48 ? glyphs.slice(0, 48).join('') + '…' : line;
+  }
+
+  function pieceTags(piece) {
+    return [labelFor(validRule(piece.rule)), ...conditionList(validConditions(piece.conditions))].filter(Boolean);
+  }
+
+  // Opening a piece makes it the draft again, so every receipt action works as is.
+  function openPiece(piece) {
+    const current = editor.value;
+    const unsaved = current.trim() && current !== piece.text && !readPieces().some(saved => saved.text === current);
+    if (unsaved && !window.confirm('쓰던 글을 이 글로 바꿀까요? 쓰던 글은 사라져요.')) return;
+    promptNouns = readPrompt(piece);
+    rule = validRule(piece.rule);
+    conditions = validConditions(piece.conditions);
+    editor.value = piece.text;
+    writing = { elapsedMs: Number.isFinite(piece.elapsedMs) ? piece.elapsedMs : 0, since: null, resumed: piece.resumed === true };
+    timerDone = true;
+    renderEditor();
+    saveDraft();
+    piecesDialog.close();
+    setView('receipt');
+    renderReceipt();
+    showKept(true);
+    element('receipt-focus').focus({ preventScroll: true });
+  }
+
+  function exportPieces() {
+    const list = readPieces();
+    if (!list.length) return;
+    const divider = '─'.repeat(28);
+    const entries = list.map(piece => {
+      const head = pieceDate(piece) + ' · ' + piece.nounIds.join(' · ');
+      const tags = pieceTags(piece).join(' · ');
+      const timing = '걸린 시간 ' + durationText(piece.elapsedMs || 0) + ' · ' + Array.from(piece.text).length + '자';
+      return [head, ...(tags ? [tags] : []), timing, '', piece.text].join('\n');
+    });
+    const text = 'GULGAM 뽑은 글 ' + list.length + '건 · ' + displayDate() + '\n\n' + divider + '\n\n'
+      + entries.join('\n\n' + divider + '\n\n') + '\n';
+    downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), 'GULGAM-뽑은글.txt');
+  }
+
+  if (piecesDialog) {
+    const list = element('pieces-list');
+    const exportButton = piecesDialog.querySelector('[data-export-pieces]');
+    const node = (tag, className, text) => {
+      const made = document.createElement(tag);
+      if (className) made.className = className;
+      if (text !== undefined) made.textContent = text;
+      return made;
+    };
+    const renderPieces = () => {
+      const pieces = readPieces();
+      list.replaceChildren(...pieces.map(piece => {
+        const row = node('li', 'piece-row');
+        const open = node('button', 'piece-open');
+        open.type = 'button';
+        open.dataset.openPiece = piece.id;
+        const head = node('span', 'piece-head');
+        head.append(node('strong', '', piece.nounIds.join(' · ')), node('span', 'piece-date', pieceDate(piece)));
+        const meta = [Array.from(piece.text).length.toLocaleString('ko-KR') + '자', ...pieceTags(piece)].join(' · ');
+        open.append(head, node('span', 'piece-excerpt', pieceExcerpt(piece.text)), node('span', 'piece-meta', meta));
+        const remove = node('button', 'piece-delete', '지우기');
+        remove.type = 'button';
+        remove.dataset.deletePiece = piece.id;
+        remove.setAttribute('aria-label', piece.nounIds.join(' · ') + ' 글 지우기');
+        row.append(open, remove);
+        return row;
+      }));
+      element('pieces-empty').hidden = pieces.length > 0;
+      element('pieces-count').textContent = pieces.length ? pieces.length + '건' : '';
+      exportButton.disabled = pieces.length === 0;
+    };
+    piecesDialog.addEventListener('gulgam:open', renderPieces);
+    list.addEventListener('click', event => {
+      const open = event.target.closest('[data-open-piece]');
+      const remove = event.target.closest('[data-delete-piece]');
+      if (open) {
+        const piece = readPieces().find(saved => saved.id === open.dataset.openPiece);
+        if (piece) openPiece(piece);
+      } else if (remove) {
+        if (!window.confirm('이 글을 지울까요? 되돌릴 수 없어요.')) return;
+        writePieces(readPieces().filter(saved => saved.id !== remove.dataset.deletePiece));
+        renderPieces();
+      }
+    });
+    exportButton.addEventListener('click', exportPieces);
+    window.addEventListener('storage', event => {
+      if (event.key === piecesKey && piecesDialog.open) renderPieces();
+    });
+  }
+
   element('copy').addEventListener('click', event => copyText(event.currentTarget));
   element('download').addEventListener('click', downloadText);
 
@@ -1183,12 +1333,13 @@
     }
   }
 
-  for (const name of ['settings', 'tools', 'mission']) {
+  for (const name of ['settings', 'tools', 'mission', 'pieces']) {
     const dialog = element(name + '-dialog');
     if (!dialog) continue;
     for (const button of all('[data-open-' + name + ']')) {
       button.addEventListener('click', () => {
         if (dialog.open) return;
+        for (const other of all('dialog[open]')) other.close();
         dialog.dispatchEvent(new Event('gulgam:open'));
         dialog.showModal();
       });
@@ -1244,7 +1395,8 @@
     }
   });
 
-  let timerDone = false;
+  // A limit that already ran out before this visit waits for a manual pull.
+  let timerDone = Boolean(timerState()?.over);
   if (missionDialog) {
     const ruleSelect = missionDialog.querySelector('[data-mission-rule]');
     const ruleValue = missionDialog.querySelector('[data-mission-value]');
