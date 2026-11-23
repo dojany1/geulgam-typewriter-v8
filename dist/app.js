@@ -30,6 +30,7 @@
   const pieceLimit = 200;
   let toastTimer;
   let drawing = null;
+  let timerWasOver = false;
   let composing = false;
 
   function readStored(key) {
@@ -138,11 +139,20 @@
 
   // A banned word inside a prompt word makes the prompt impossible, and a given
   // sentence that already holds a prompt word would write it for the writer.
-  function ruleConflicts(candidate, words = promptWords) {
+  function ruleConflicts(candidate) {
     if (!candidate) return false;
-    if (candidate.type === 'ban') return words.some(word => clash(word, candidate.value));
-    if (sentenceRule(candidate.type)) return words.some(word => formsOf(word).some(form => candidate.value.includes(form)));
+    if (candidate.type === 'ban') return promptWords.some(word => clash(word, candidate.value));
+    if (sentenceRule(candidate.type)) return promptWords.some(word => formsOf(word).some(form => candidate.value.includes(form)));
     return false;
+  }
+
+  // A rule that clashes with newly drawn words is drawn again, and a first
+  // sentence the app wrote follows the new rule.
+  function redrawClashingRule() {
+    if (!ruleConflicts(rule)) return;
+    const previous = rule;
+    rule = drawRule(rule.type);
+    syncOpening(previous);
   }
 
   function drawRule(type, avoid) {
@@ -180,7 +190,7 @@
     const parts = ['w=' + promptWords.join(',')];
     // Encoded so a sentence's spaces do not cut the link short in a messenger.
     if (rule) parts.push('r=' + rule.type + ':' + encodeURIComponent(rule.value));
-    const chosen = conditionKeys.filter(key => conditions[key]).map(key => key + ':' + conditions[key]);
+    const chosen = conditionKeys.filter(key => conditions[key]).map(key => key + ':' + encodeURIComponent(conditions[key]));
     if (chosen.length) parts.push('c=' + chosen.join(','));
     return location.origin + location.pathname + '?' + parts.join('&');
   }
@@ -222,6 +232,7 @@
   let promptWords = readPrompt(draft);
   let rule = validRule(draft.rule);
   let conditions = validConditions(draft.conditions);
+  const savedRule = rule;
   const linked = readLink();
   if (linked) {
     // A received prompt replaces the saved one. Text being written stays, as with 다른 글감.
@@ -233,19 +244,19 @@
   editor.value = draft.text || '';
   let writing = readWritingTime(draft);
 
-  // A time limit measures from the moment it is set, not from an older draft.
+  // A time limit counts from the moment it is set. The writing time keeps
+  // running underneath it, so the receipt still shows the whole time taken.
   function restartClock() {
-    writing = { elapsedMs: 0, since: editor.value.trim() ? Date.now() : null, resumed: false };
+    writing.timerFrom = elapsedMs();
   }
   if (linked?.rule?.type === 'timer') restartClock();
-  // A received first sentence starts an empty page; written text is never touched.
-  if (linked?.rule?.type === 'first' && !editor.value.trim()) editor.value = linked.rule.value + ' ';
 
   function readWritingTime(record) {
     const saved = record.writingTime;
     if (saved && Number.isFinite(saved.elapsedMs) && saved.elapsedMs >= 0
         && (saved.since === null || Number.isFinite(saved.since) && saved.since > 0)) {
-      return { elapsedMs: saved.elapsedMs, since: saved.since, resumed: saved.resumed === true };
+      const timerFrom = Number.isFinite(saved.timerFrom) && saved.timerFrom >= 0 ? saved.timerFrom : 0;
+      return { elapsedMs: saved.elapsedMs, since: saved.since, resumed: saved.resumed === true, timerFrom };
     }
     // Older drafts only recorded their last edit, not when writing began.
     const resuming = Boolean(record.text?.trim());
@@ -355,7 +366,7 @@
 
   // Given sentences match regardless of spacing and the closing punctuation.
   function sentenceCore(text) {
-    return text.normalize('NFC').replace(/\s+/g, ' ').trim().replace(/[\s.!?…~'"’”」』)]+$/u, '');
+    return text.normalize('NFC').replace(/\s+/g, '').replace(/[.!?…~'"’”」』)]+$/u, '');
   }
 
   // The app writes its own text into the editor as an ordinary input, so the
@@ -396,7 +407,7 @@
   // an overrun is printed on the slip instead.
   function timerState() {
     if (!rule || rule.type !== 'timer') return null;
-    const remaining = rule.value * 60000 - elapsedMs();
+    const remaining = rule.value * 60000 - (elapsedMs() - (writing.timerFrom || 0));
     return { remaining, over: remaining <= 0 };
   }
 
@@ -500,7 +511,10 @@
     drawing = null;
     delete promptHeading.dataset.drawing;
     promptHeading.removeAttribute('aria-busy');
-    for (const label of promptLabels) delete label.dataset.landed;
+    for (const label of promptLabels) {
+      delete label.dataset.landed;
+      label.style.minWidth = '';
+    }
     renderEditor();
   }
 
@@ -511,8 +525,11 @@
       const list = isAdjective(word) ? adjectiveIds : gulgamWords.nouns;
       const length = Array.from(word).length;
       const same = list.filter(other => other !== word && Array.from(other).length === length);
-      return same.length >= 3 ? same : list.filter(other => other !== word);
+      // With too few words of the same length, borrow shorter ones; the slot
+      // keeps its final width below, so the line never jumps.
+      return same.length >= 3 ? same : list.filter(other => other !== word && Array.from(other).length <= length);
     });
+    for (const label of promptLabels) label.style.minWidth = label.getBoundingClientRect().width + 'px';
     const landAt = promptWords.map((_, index) => duration * (index + 1) / promptWords.length);
     const start = performance.now();
     const run = { timer: 0 };
@@ -569,13 +586,19 @@
       rule = validRule(latest.rule);
       conditions = validConditions(latest.conditions);
     }
+    // A limit that ran out elsewhere is not this tab's to pull.
+    timerWasOver = Boolean(timerState()?.over);
     if (editor.value !== latest.text) editor.value = latest.text;
     renderEditor();
     if (sameSavedPrompt(latest)) showSaveStatus(storage);
     else saveDraft();
     if (document.body.dataset.view === 'receipt') {
-      if (!element('pull').disabled) renderReceipt();
-      else setView('write');
+      if (!element('pull').disabled) {
+        renderReceipt();
+        refreshKept();
+      } else {
+        setView('write');
+      }
     }
   }
 
@@ -961,7 +984,7 @@
 
   element('reroll').addEventListener('click', () => {
     promptWords = newPrompt(isAdjective(promptWords[0]));
-    if (ruleConflicts(rule)) rule = drawRule(rule.type);
+    redrawClashingRule();
     renderEditor();
     saveDraft();
     if (document.body.dataset.view === 'receipt') {
@@ -1169,7 +1192,8 @@
     context.restore();
   }
 
-  // The receipt is the share card: one slip, 1080 wide, at least 4:5 tall.
+  // The receipt is the share card: one slip on a 1080×1350 (4:5) image. A long
+  // text gets a smaller face first, and is cut with a note only if it still overflows.
   async function drawReceiptImage() {
     const sans = '"Noto Sans KR", sans-serif';
     const latin = 'Poppins, "Noto Sans KR", sans-serif';
@@ -1183,23 +1207,31 @@
     const right = width - margin - inset;
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    const bodyFont = '400 38px ' + sans;
-    const bodyLine = 62;
-    context.font = bodyFont;
-    let lines = wrapLines(context, editor.value.replace(/\s+$/, ''), right - left);
-    const maxLines = 34;
-    const clipped = lines.length > maxLines;
-    if (clipped) lines = lines.slice(0, maxLines);
+    const height = 1350;
     // A given sentence can outgrow one line of the slip.
     context.font = '500 28px ' + sans;
     const metaLines = [receiptRuleText(), conditionLabels().join(' · ')].filter(Boolean)
       .flatMap(line => wrapLines(context, line, right - left));
     const blocks = {
-      header: 128, nouns: promptWords.length * 84 + 12, meta: metaLines.length * 44 + (metaLines.length ? 12 : 0),
-      body: lines.length * bodyLine + (clipped ? 52 : 0) + 24, footer: 104
+      header: 128, nouns: promptWords.length * 84 + 12, meta: metaLines.length * 44 + (metaLines.length ? 12 : 0), footer: 104
     };
-    const slipHeight = inset * 2 + blocks.header + blocks.nouns + blocks.meta + blocks.body + blocks.footer + 36 * 3;
-    const height = Math.max(1350, slipHeight + margin * 2);
+    const fixedHeight = inset * 2 + blocks.header + blocks.nouns + blocks.meta + 24 + blocks.footer + 36 * 3;
+    const room = height - margin * 2 - fixedHeight;
+    const text = editor.value.replace(/\s+$/, '');
+    let body;
+    for (const size of [38, 34, 30, 27]) {
+      context.font = '400 ' + size + 'px ' + sans;
+      body = { size, lineHeight: Math.round(size * 1.63), lines: wrapLines(context, text, right - left), clipped: false };
+      if (body.lines.length * body.lineHeight <= room) break;
+    }
+    if (body.lines.length * body.lineHeight > room) {
+      body.clipped = true;
+      body.lines = body.lines.slice(0, Math.max(1, Math.floor((room - 52) / body.lineHeight)));
+    }
+    const bodyFont = '400 ' + body.size + 'px ' + sans;
+    const lines = body.lines;
+    const clipped = body.clipped;
+    const slipHeight = fixedHeight + lines.length * body.lineHeight + (clipped ? 52 : 0);
     canvas.width = width;
     canvas.height = height;
     const top = Math.round((height - slipHeight) / 2);
@@ -1255,10 +1287,11 @@
     y += 36;
     context.fillStyle = ink;
     context.font = bodyFont;
+    const ascent = Math.round(body.size * 1.21);
     for (const line of lines) {
-      y += 46;
+      y += ascent;
       context.fillText(line, left, y);
-      y += bodyLine - 46;
+      y += body.lineHeight - ascent;
     }
     if (clipped) {
       y += 40;
@@ -1351,6 +1384,14 @@
     if (!kept) showToast('뽑은 글에 보관하지 못했어요. 글을 복사하거나 TXT로 저장해 주세요.');
   }
 
+  // When another tab changes the receipt's text, it is kept only if that exact piece is in the list.
+  function refreshKept() {
+    const status = element('receipt-kept');
+    if (!status) return;
+    const kept = readPieces().some(saved => samePiece(saved, { nounIds: promptWords, text: editor.value }));
+    status.textContent = kept ? '뽑은 글에 보관됨' : '';
+  }
+
   function pieceDate(piece) {
     const printed = new Date(piece.printedAt);
     return displayDate(Number.isNaN(printed.getTime()) ? new Date() : printed);
@@ -1376,7 +1417,7 @@
     conditions = validConditions(piece.conditions);
     editor.value = piece.text;
     writing = { elapsedMs: Number.isFinite(piece.elapsedMs) ? piece.elapsedMs : 0, since: null, resumed: piece.resumed === true };
-    timerDone = true;
+    timerWasOver = Boolean(timerState()?.over);
     renderEditor();
     saveDraft();
     piecesDialog.close();
@@ -1563,7 +1604,7 @@
   });
 
   // A limit that already ran out before this visit waits for a manual pull.
-  let timerDone = Boolean(timerState()?.over);
+  timerWasOver = Boolean(timerState()?.over);
   if (missionDialog) {
     const kindSelect = missionDialog.querySelector('[data-mission-kind]');
     const ruleSelect = missionDialog.querySelector('[data-mission-rule]');
@@ -1584,7 +1625,6 @@
       for (const select of conditionSelects) select.value = conditions[select.dataset.missionCondition] || '';
     };
     const commitMission = () => {
-      timerDone = false;
       renderEditor();
       saveDraft();
       renderMissionDialog();
@@ -1595,7 +1635,7 @@
       const adjective = kindSelect.value === 'adjective';
       if (adjective === isAdjective(promptWords[0])) return;
       promptWords = [adjective ? pickAdjective(promptWords[1]) : pickNoun(promptWords[1]), promptWords[1]];
-      if (ruleConflicts(rule)) rule = drawRule(rule.type);
+      redrawClashingRule();
       commitMission();
     });
     ruleSelect.addEventListener('change', () => {
@@ -1623,22 +1663,30 @@
     }
   }
 
-  // When the time is up and the prompt is met, the slip pulls itself.
+  // At the moment the time runs out, a met prompt pulls its slip, once. Running
+  // out with a word missing, or editing afterwards, never pulls it later.
   setInterval(() => {
     const timer = timerState();
     if (!timer || document.body.dataset.view !== 'write') return;
     renderEditor();
-    if (timer.over && !timerDone && !composing && !element('pull').disabled) {
-      timerDone = true;
-      element('pull').click();
+    if (!timer.over) {
+      timerWasOver = false;
+      return;
     }
+    if (timerWasOver || composing) return;
+    timerWasOver = true;
+    if (!element('pull').disabled) element('pull').click();
   }, 1000);
 
   if (element('paper-date')) element('paper-date').textContent = displayDate();
   renderTheme();
   renderSoundState();
   renderEditor();
-  if (sameSavedPrompt(draft) && (draft.writingTime || !draft.text.trim())) showSaveStatus(initial.storage);
+  // A received rule may replace a first sentence the app wrote; the writer's own
+  // text stays. This writes through the editor, so it waits until everything is set up.
+  if (linked) syncOpening(savedRule);
+  // A link may have moved the clock or written a first sentence, even when its prompt matches the saved one.
+  if (!linked && sameSavedPrompt(draft) && (draft.writingTime || !draft.text.trim())) showSaveStatus(initial.storage);
   else saveDraft();
   // A received prompt shows at once; a first visit draws its prompt.
   if (linked) showToast('받은 글감으로 시작해요. ' + wordPair());
