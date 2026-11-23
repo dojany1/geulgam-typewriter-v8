@@ -60,6 +60,13 @@ svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width:
 .result-tools button:hover, .tools-list button:hover { text-decoration: underline; }
 #receipt-length { color: var(--muted); font-size: 12px; }
 .result-exports { display: flex; gap: 20px; margin-left: auto; }
+.finish-row { display: flex; justify-content: flex-end; min-height: 52px; padding: 8px 0; }
+.finish-button { height: 36px; padding: 0 16px; border: 1px solid var(--line); border-radius: 18px; color: var(--muted); background: var(--bg); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.finish-button[data-ready="true"] { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+@media (pointer: coarse) {
+  body[data-editing] .finish-button { position: fixed; z-index: 14; right: 16px; bottom: calc(var(--keyboard-inset, 0px) + 12px); box-shadow: 0 2px 12px rgb(0 0 0 / .2); }
+  body[data-editing] #toast { bottom: calc(var(--keyboard-inset, 0px) + 60px); }
+}
 dialog { width: min(340px,calc(100% - 40px)); padding: 21px; margin: auto; color: var(--fg); background: var(--bg); border: 1px solid var(--fg); }
 dialog::backdrop { background: rgb(0 0 0 / .23); }
 .dialog-heading, .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

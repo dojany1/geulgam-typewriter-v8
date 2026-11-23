@@ -336,13 +336,17 @@
     const shift = shifted || shiftKey;
     if (shifted) { shifted = false; updateLayout(); }
 
-    // Enter breaks the line; again on the empty last line, app.js ends the writing.
+    // Enter breaks the line. Again on the empty last line it ends the writing once
+    // it can be pulled (app.js decides); before that it is a blank line and a nudge.
     if (code === 'Enter' && !shift && start === end && !editor.value.slice(end).trim()
         && /\n[^\S\n]*$/.test(editor.value.slice(0, start))) {
-      setActive(null);
-      document.dispatchEvent(new CustomEvent('gulgam:finish'));
-      if (retainButtonFocus && document.body.dataset.view === 'write') button.focus({ preventScroll: true });
-      return;
+      if (!document.getElementById('pull').disabled) {
+        setActive(null);
+        document.dispatchEvent(new CustomEvent('gulgam:finish'));
+        if (retainButtonFocus && document.body.dataset.view === 'write') button.focus({ preventScroll: true });
+        return;
+      }
+      document.dispatchEvent(new CustomEvent('gulgam:nudge'));
     }
     if (code === 'ArrowLeft' || code === 'ArrowRight') {
       const left = code === 'ArrowLeft';

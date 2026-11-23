@@ -10,6 +10,7 @@
   const soundLabels = all('[data-sound-label]');
   const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="share-image"], [data-action="share-card"]');
   const printButtons = all('#pull, [data-action="pull"]');
+  const finishButtons = all('[data-finish]');
   const promptLabels = all('#words [data-prompt-word]');
   const promptHeading = element('words');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -541,7 +542,8 @@
   function renderEditor() {
     const count = characterCount();
     element('word-count').textContent = count.toLocaleString('ko-KR') + '자';
-    const hint = isAdjective(promptWords[0]) ? '두 단어를 넣어 써보세요. 형용사는 모양을 바꿔 써도 돼요.' : '두 단어를 넣어 자유롭게 써보세요.';
+    const hint = (isAdjective(promptWords[0]) ? '두 단어를 넣어 써보세요. 형용사는 모양을 바꿔 써도 돼요.' : '두 단어를 넣어 자유롭게 써보세요.')
+      + '\n다 쓰면 엔터를 두 번 누르세요.';
     if (editor.placeholder !== hint) editor.placeholder = hint;
     const empty = !editor.value.trim();
     for (const button of draftActions) button.disabled = empty;
@@ -560,6 +562,18 @@
     else progress = '두 단어를 모두 썼어요. 글을 뽑을 수 있어요.';
     if (timerState()?.over) progress = '시간이 다 됐어요. ' + progress;
     if (promptProgress.textContent !== progress) promptProgress.textContent = progress;
+    // The finish button says what is left; both words left reads as a count, so a
+    // prompt being revealed is not spelled out early.
+    const ready = !missing.length && !broken;
+    let finishLabel = '글 뽑기';
+    if (missing.length === promptWords.length) finishLabel = '두 단어 남음';
+    else if (missing.length) finishLabel = '‘' + missing[0] + '’ 남음';
+    else if (broken) finishLabel = ruleKinds[rule.type].name + ' 확인';
+    for (const button of finishButtons) {
+      if (button.textContent !== finishLabel) button.textContent = finishLabel;
+      button.dataset.ready = String(ready);
+      button.setAttribute('aria-disabled', String(!ready));
+    }
     for (const label of lineCounters) label.textContent = editor.value ? String(editor.value.split('\n').length) : '0';
     renderPromptLine();
     updateCarriage();
@@ -971,24 +985,59 @@
   function recentIMECommit() {
     return recentCommit && performance.now() - recentCommit.at < 45;
   }
-  // 완료: Enter breaks the line, and Enter again on the empty last line ends the
-  // writing. With every prompt word in and the rule kept it pulls the receipt;
-  // otherwise it says what is still missing. Shift+Enter only breaks the line.
+  // 완료: the finish button, or Enter again on the empty last line once every
+  // prompt word is in and the rule is kept. Before that the second Enter is an
+  // ordinary blank line and the finish button shakes to show what is left.
+  // Shift+Enter only breaks the line.
   function onEmptyLastLine(start = editor.selectionStart, end = editor.selectionEnd) {
     return start === end && !editor.value.slice(end).trim() && /\n[^\S\n]*$/.test(editor.value.slice(0, start));
   }
 
-  function finishWriting() {
+  function nudgeFinish() {
+    for (const button of [...finishButtons, ...all('.print-button')]) {
+      button.classList.remove('nudge');
+      void button.offsetWidth;
+      button.classList.add('nudge');
+    }
+  }
+
+  // An Enter ending may have been meant as a paragraph break; 다시 쓰기 gives it back.
+  let enterEnding = null;
+  function finishWriting(fromEnter = false) {
     if (element('pull').disabled) {
+      nudgeFinish();
       showToast('아직 뽑을 수 없어요. ' + promptProgress.textContent);
       return;
     }
-    const text = editor.value.replace(/\s+$/, '');
-    if (text !== editor.value) setEditorText(text);
     element('pull').click();
+    enterEnding = fromEnter && document.body.dataset.view === 'receipt' ? editor.value : null;
   }
   // The typewriter's screen keyboard asks for the same ending.
-  document.addEventListener('gulgam:finish', finishWriting);
+  document.addEventListener('gulgam:finish', () => finishWriting(true));
+  document.addEventListener('gulgam:nudge', nudgeFinish);
+
+  if (finishButtons.length) {
+    for (const button of finishButtons) {
+      // Keep the phone keyboard open while the button answers.
+      button.addEventListener('pointerdown', event => {
+        if (document.activeElement === editor) event.preventDefault();
+      });
+      button.addEventListener('click', () => finishWriting());
+    }
+    // While writing on a phone the button rides just above the keyboard.
+    const view = window.visualViewport;
+    const updateKeyboardInset = () => {
+      const inset = view ? Math.max(0, window.innerHeight - view.height - view.offsetTop) : 0;
+      document.documentElement.style.setProperty('--keyboard-inset', Math.round(inset) + 'px');
+    };
+    view?.addEventListener('resize', updateKeyboardInset);
+    view?.addEventListener('scroll', updateKeyboardInset);
+    editor.addEventListener('focus', () => {
+      document.body.dataset.editing = '';
+      updateKeyboardInset();
+    });
+    editor.addEventListener('blur', () => delete document.body.dataset.editing);
+  }
 
   editor.addEventListener('pointerdown', startAudio);
   editor.addEventListener('keydown', event => {
@@ -998,9 +1047,13 @@
       commitReturn = composing || event.isComposing || event.keyCode === 229 || recentIMECommit();
       shiftReturn = event.shiftKey;
       if (!commitReturn && !shiftReturn && onEmptyLastLine()) {
-        event.preventDefault();
-        if (!event.repeat) finishWriting();
-        return;
+        if (element('pull').disabled) {
+          nudgeFinish();
+        } else {
+          event.preventDefault();
+          if (!event.repeat) finishWriting(true);
+          return;
+        }
       }
     }
     const composingKey = (event.isComposing || event.key === 'Process')
@@ -1031,9 +1084,13 @@
     // Soft keyboards often send a line break with no usable keydown.
     if ((event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak')
         && !composing && !event.isComposing && !shiftReturn && onEmptyLastLine()) {
-      if (event.cancelable) event.preventDefault();
-      finishWriting();
-      return;
+      if (element('pull').disabled) {
+        nudgeFinish();
+      } else {
+        if (event.cancelable) event.preventDefault();
+        finishWriting(true);
+        return;
+      }
     }
     // A mobile IME may only send beforeinput. Hardware already sounds at
     // keydown; ignoring its follow-up input also avoids double-sounding Hangul.
@@ -1065,7 +1122,7 @@
     updateWritingTime();
     const wasReady = !element('pull').disabled;
     renderEditor();
-    if (!wasReady && !element('pull').disabled) showToast('이제 글을 뽑을 수 있어요. 다 쓰면 Enter를 두 번 누르세요.');
+    if (!wasReady && !element('pull').disabled) showToast('이제 글을 뽑을 수 있어요. 다 쓰면 엔터 두 번!');
     saveDraft();
   });
 
@@ -1136,6 +1193,9 @@
 
   element('pull').addEventListener('click', () => {
     if (document.body.dataset.view !== 'write' || composing || missingPromptWords().length || ruleBroken()) return;
+    // Trailing blank lines are not part of the piece, so pulling the same text twice stays one piece.
+    const text = editor.value.replace(/\s+$/, '');
+    if (text !== editor.value) setEditorText(text);
     editor.blur();
     writing.elapsedMs = elapsedMs();
     writing.since = null;
@@ -1151,6 +1211,8 @@
 
   element('back').addEventListener('click', () => {
     setView('write');
+    if (enterEnding !== null && editor.value === enterEnding) setEditorText(enterEnding + '\n\n');
+    enterEnding = null;
     editor.focus({ preventScroll: true });
   });
 

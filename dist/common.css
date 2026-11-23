@@ -44,6 +44,9 @@ button:focus-visible, a:focus-visible, dialog button:focus-visible { outline: 2p
   width: max-content; max-width: calc(100vw - 30px); padding: 8px 13px; border-radius: 2px;
   color: var(--bg); background: var(--fg); pointer-events: none; font: 12px/1.45 system-ui,sans-serif;
 }
+/* A finish control shakes when it cannot pull yet. */
+.nudge { animation: nudge .36s ease; }
+@keyframes nudge { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
