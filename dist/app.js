@@ -8,7 +8,7 @@
   const roundKeys = document.body.dataset.keyShape === 'round';
   const soundButtons = all('#sound, [data-sound-toggle]');
   const soundLabels = all('[data-sound-label]');
-  const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="share-image"]');
+  const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="share-image"], [data-action="share-card"]');
   const printButtons = all('#pull, [data-action="pull"]');
   const promptLabels = all('#words [data-prompt-word]');
   const promptHeading = element('words');
@@ -24,6 +24,7 @@
   const carriage = document.querySelector('[data-carriage]');
   const promptLines = all('[data-prompt-line]');
   const ruleSentences = all('[data-rule-sentence]');
+  const promptTitles = all('[data-prompt-title]');
   const promptDialog = element('prompt-dialog');
   const piecesDialog = element('pieces-dialog');
   const piecesKey = 'gulgam.pieces.v1';
@@ -110,6 +111,37 @@
     && (gulgamWords.nouns.includes(words[0]) || isAdjective(words[0]))
     && gulgamWords.nouns.includes(words[1]) && !clash(words[0], words[1]);
 
+  // 오늘의 글감: the date in Korea gives everyone the same numbered prompt, day 1
+  // being 2026-11-23. Each word is the one whose hash with the day scores lowest,
+  // so adding a word to a list changes only the days that word wins.
+  const dayLength = 86400000;
+  const dailyEpoch = Date.UTC(2026, 10, 22, 15);
+  const dayNumber = (time = Date.now()) => Math.floor((time - dailyEpoch) / dayLength) + 1;
+  const validDaily = value => Number.isInteger(value) && value >= 1 && value <= dayNumber() ? value : null;
+
+  function hashScore(text) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash;
+  }
+
+  // Every third day leads with an adjective.
+  function dailyWords(day) {
+    const lowest = (list, salt) => list.reduce((best, word) =>
+      best === null || hashScore(day + salt + word) < hashScore(day + salt + best) ? word : best, null);
+    const first = day % 3 === 0 ? lowest(adjectiveIds, ':a:') : lowest(gulgamWords.nouns, ':1:');
+    return [first, lowest(gulgamWords.nouns.filter(word => word !== first && !clash(first, word)), ':2:')];
+  }
+
+  // A number belongs to a prompt only while its words are that day's words.
+  function dailyOf(words, value) {
+    const day = validDaily(value);
+    return day && dailyWords(day).join() === words.join() ? day : null;
+  }
+
   // A given sentence that already holds a prompt word would write it for the writer.
   const holdsWord = (sentence, word) => formsOf(word).some(form => sentence.includes(form));
 
@@ -162,11 +194,12 @@
     return conditions;
   }
 
-  // A saved draft or piece carries a whole prompt: its words, rule and conditions.
+  // A saved draft or piece carries a whole prompt: its words, rule, conditions and day.
   function adoptPrompt(record) {
     promptWords = readPrompt(record);
     rule = validRule(record.rule);
     conditions = validConditions(record.conditions);
+    dailyNumber = dailyOf(promptWords, record.daily);
   }
 
   function ruleConflicts(candidate) {
@@ -210,7 +243,8 @@
     return {
       words,
       rule: validRule({ type, value: textRule(type) ? value.normalize('NFC') : Number(value) }),
-      conditions: validConditions(conditions)
+      conditions: validConditions(conditions),
+      daily: validDaily(Number(params.get('d')))
     };
   }
 
@@ -220,6 +254,7 @@
     if (rule) parts.push('r=' + rule.type + ':' + encodeURIComponent(rule.value));
     const chosen = conditionKeys.filter(key => conditions[key]).map(key => key + ':' + encodeURIComponent(conditions[key]));
     if (chosen.length) parts.push('c=' + chosen.join(','));
+    if (dailyNumber) parts.push('d=' + dailyNumber);
     return location.origin + location.pathname + '?' + parts.join('&');
   }
 
@@ -260,17 +295,31 @@
   let promptWords = readPrompt(draft);
   let rule = validRule(draft.rule);
   let conditions = validConditions(draft.conditions);
+  let dailyNumber = dailyOf(promptWords, draft.daily);
   const savedRule = rule;
   const linked = readLink();
+  // A new day opens on today's prompt with a clean page, unless the page holds
+  // writing that is not kept as a piece yet; that stays, and the new prompt waits.
+  const today = dayNumber();
+  const newDay = !linked && (!initial.record || dayNumber(modifiedTime(draft)) < today);
+  const draftKept = Boolean(draft.text?.trim()) && readPieces().some(piece => piece.text === draft.text);
+  const freshPage = newDay && (!draft.text?.trim() || draftKept);
+  const dailyWaiting = newDay && !freshPage;
   if (linked) {
     // A received prompt replaces the saved one. Text being written stays, as with 다른 글감.
     promptWords = linked.words.map(rememberWord);
     rule = linked.rule;
     conditions = linked.conditions;
+    dailyNumber = dailyOf(promptWords, linked.daily);
     history.replaceState(null, '', location.pathname);
+  } else if (freshPage) {
+    promptWords = dailyWords(today).map(rememberWord);
+    rule = null;
+    conditions = {};
+    dailyNumber = today;
   }
-  editor.value = draft.text || '';
-  let writing = readWritingTime(draft);
+  editor.value = freshPage ? '' : draft.text || '';
+  let writing = freshPage ? { elapsedMs: 0, since: null, resumed: false } : readWritingTime(draft);
 
   // A time limit counts from the moment it is set. The writing time keeps
   // running underneath it, so the receipt still shows the whole time taken.
@@ -315,14 +364,20 @@
     return promptWords.join(' · ');
   }
 
-  function promptSignature(nouns, savedRule, savedConditions) {
-    return JSON.stringify([nouns, savedRule, conditionKeys.map(key => savedConditions[key] || '')]);
+  // Today's numbered prompt reads 오늘의 글감; an earlier one keeps its number.
+  function promptTitle() {
+    if (!dailyNumber) return '글감';
+    return dailyNumber === dayNumber() ? '오늘의 글감 ' + dailyNumber + '번' : dailyNumber + '번 글감';
+  }
+
+  function promptSignature(nouns, savedRule, savedConditions, daily) {
+    return JSON.stringify([nouns, savedRule, conditionKeys.map(key => savedConditions[key] || ''), daily]);
   }
 
   function sameSavedPrompt(record) {
     return (record.version === 2 || record.version === 3) && Array.isArray(record.nounIds) && record.nounIds.length === 2
-      && promptSignature(record.nounIds, validRule(record.rule), validConditions(record.conditions))
-        === promptSignature(promptWords, rule, conditions);
+      && promptSignature(record.nounIds, validRule(record.rule), validConditions(record.conditions), dailyOf(record.nounIds, record.daily))
+        === promptSignature(promptWords, rule, conditions, dailyNumber);
   }
 
   const saveMessages = {
@@ -342,7 +397,7 @@
   function saveDraft() {
     lastEditTime = Math.max(Date.now(), lastEditTime + 1);
     const serialized = JSON.stringify({
-      version: 3, nounIds: promptWords, rule, conditions,
+      version: 3, nounIds: promptWords, rule, conditions, daily: dailyNumber,
       text: editor.value, writingTime: writing, updatedAt: new Date(lastEditTime).toISOString()
     });
     try {
@@ -446,6 +501,8 @@
   const conditionLabels = () => conditionList(conditions);
 
   function renderPromptLine() {
+    const title = promptTitle();
+    for (const label of promptTitles) if (label.textContent !== title) label.textContent = title;
     const timer = timerState();
     const chips = [];
     if (rule) {
@@ -1000,6 +1057,7 @@
 
   element('reroll').addEventListener('click', () => {
     promptWords = newPrompt(isAdjective(promptWords[0]));
+    dailyNumber = null;
     redrawClashingRule();
     renderEditor();
     saveDraft();
@@ -1041,6 +1099,7 @@
 
   function renderReceipt(animate = false) {
     element('receipt-text').textContent = editor.value;
+    element('receipt-focus').textContent = dailyNumber ? '글 영수증 · ' + dailyNumber + '번' : '글 영수증';
     const ruleLine = element('receipt-rule');
     const conditionLine = element('receipt-conditions');
     ruleLine.textContent = receiptRuleText();
@@ -1138,7 +1197,7 @@
 
   async function sharePrompt(trigger) {
     const url = promptUrl();
-    const text = wordPair() + (rule ? ' · ' + ruleLabel() : '') + ' — 이 글감으로 글 써볼래?';
+    const text = (dailyNumber ? promptTitle() + ' · ' : '') + wordPair() + (rule ? ' · ' + ruleLabel() : '') + ' — 이 글감으로 글 써볼래?';
     if (navigator.share && touchSharing()) {
       try {
         await navigator.share({ title: 'GULGAM 글감', text, url });
@@ -1275,7 +1334,7 @@
     context.textAlign = 'right';
     context.fillStyle = muted;
     context.font = '500 26px ' + sans;
-    context.fillText('글 영수증', right, y - 4);
+    context.fillText(dailyNumber ? '글 영수증 · ' + dailyNumber + '번' : '글 영수증', right, y - 4);
     context.font = '400 24px ' + sans;
     context.fillText(displayDate(), right, y + 40);
     context.textAlign = 'left';
@@ -1361,6 +1420,161 @@
     if (trigger?.getClientRects().length) trigger.focus();
   }
 
+  // 글 가리고 공유: a 1080×1920 story card with the prompt and how the writing
+  // went. Every word of the text is blacked out where it would sit, so a friend
+  // sees its shape and writes their own before reading anyone's.
+  async function drawShareCard() {
+    const sans = '"Noto Sans KR", sans-serif';
+    const latin = 'Poppins, "Noto Sans KR", sans-serif';
+    await Promise.all(['400 34px "Noto Sans KR"', '700 104px "Noto Sans KR"', '500 46px Poppins', '700 46px Poppins']
+      .map(font => document.fonts.load(font).catch(() => null)));
+    const width = 1080;
+    const height = 1920;
+    const margin = 96;
+    const inset = 64;
+    const left = margin + inset;
+    const right = width - margin - inset;
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = width;
+    canvas.height = height;
+    // The slip stays clear of a story's top and bottom bars, so a long text shows
+    // only its first lines; the count below still tells its length.
+    const lineHeight = 58;
+    context.font = '400 34px ' + sans;
+    const lines = wrapLines(context, editor.value.replace(/\s+$/, ''), right - left).slice(0, 8);
+    const blocks = {
+      header: 110, prompt: 56 + promptWords.length * 124 + 36, body: 44 + lines.length * lineHeight + 40, stats: 190, footer: 96
+    };
+    const slipHeight = inset * 2 + Object.values(blocks).reduce((sum, block) => sum + block, 0);
+    const top = Math.round((height - slipHeight) / 2);
+    context.fillStyle = '#e4e0d8';
+    context.fillRect(0, 0, width, height);
+    slipPath(context, margin, top, width - margin * 2, slipHeight, 14);
+    context.save();
+    context.shadowColor = 'rgba(0, 0, 0, .14)';
+    context.shadowBlur = 28;
+    context.shadowOffsetY = 10;
+    context.fillStyle = '#fff';
+    context.fill();
+    context.restore();
+
+    const ink = '#111';
+    const muted = '#6f6b64';
+    let y = top + inset + 50;
+    context.textBaseline = 'alphabetic';
+    context.fillStyle = ink;
+    context.font = '500 46px ' + latin;
+    context.fillText('gul', left, y);
+    const gulWidth = context.measureText('gul').width;
+    context.font = '700 46px ' + latin;
+    context.fillText('gam', left + gulWidth, y);
+    context.textAlign = 'right';
+    context.fillStyle = muted;
+    context.font = '400 26px ' + sans;
+    context.fillText(displayDate(), right, y - 4);
+    context.textAlign = 'left';
+    y = top + inset + blocks.header;
+    dashedLine(context, left, right, y);
+
+    y += 56;
+    context.fillStyle = muted;
+    context.font = '500 30px ' + sans;
+    context.fillText(promptTitle(), left, y);
+    context.fillStyle = ink;
+    context.font = '700 104px ' + sans;
+    for (const word of promptWords) {
+      y += 124;
+      context.fillText(word, left, y);
+    }
+    y += 36;
+    dashedLine(context, left, right, y);
+
+    y += 44;
+    context.font = '400 34px ' + sans;
+    const space = context.measureText(' ').width;
+    context.fillStyle = '#1d1d1d';
+    for (const line of lines) {
+      y += lineHeight;
+      let x = left;
+      for (const word of line.split(' ')) {
+        const wordWidth = context.measureText(word).width;
+        if (wordWidth) {
+          context.beginPath();
+          if (context.roundRect) context.roundRect(x, y - 31, wordWidth, 38, 5);
+          else context.rect(x, y - 31, wordWidth, 38);
+          context.fill();
+        }
+        x += wordWidth + space;
+      }
+    }
+    y += 40;
+    dashedLine(context, left, right, y);
+
+    const middle = left + Math.round((right - left) / 2);
+    y += 64;
+    context.fillStyle = muted;
+    context.font = '500 26px ' + sans;
+    context.fillText(writing.resumed ? '이어서 쓴 시간' : '걸린 시간', left, y);
+    context.fillText('글자 수', middle, y);
+    y += 72;
+    context.fillStyle = ink;
+    context.font = '700 56px ' + sans;
+    context.fillText(durationText(elapsedMs()), left, y);
+    context.fillText(characterCount().toLocaleString('ko-KR') + '자', middle, y);
+    y += 54;
+    dashedLine(context, left, right, y);
+
+    y += 60;
+    context.fillStyle = muted;
+    context.font = '500 26px ' + sans;
+    context.fillText('같은 글감으로 써 보기', left, y);
+    context.textAlign = 'right';
+    context.fillStyle = ink;
+    context.font = '500 26px ' + latin;
+    context.fillText(location.host, right, y);
+    context.textAlign = 'left';
+    return canvas;
+  }
+
+  // The words that travel with the card: what was written, without the text, and the same prompt's link.
+  function shareCardText() {
+    return promptTitle() + ' · ' + wordPair() + ' — ' + durationText(elapsedMs()) + ' 동안 '
+      + characterCount().toLocaleString('ko-KR') + '자를 썼어요. 같은 글감으로 써 볼래? ' + promptUrl();
+  }
+
+  async function shareCard(trigger) {
+    if (!editor.value.trim()) return;
+    let blob = null;
+    try {
+      const canvas = await drawShareCard();
+      blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    } catch { /* Reported below. */ }
+    if (!blob) {
+      showToast('공유 카드를 만들지 못했어요.');
+      return;
+    }
+    const name = 'GULGAM-' + promptWords.join('-') + '-카드.png';
+    const file = new File([blob], name, { type: 'image/png' });
+    const text = shareCardText();
+    if (touchSharing() && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'GULGAM ' + promptTitle(), text });
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+      }
+    }
+    downloadBlob(blob, name);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch { /* The saved card is enough on its own. */ }
+    showToast(copied ? '공유 카드를 저장하고 소개 글과 링크를 복사했어요.' : '공유 카드를 저장했어요.');
+    if (trigger?.getClientRects().length) trigger.focus();
+  }
+
   // Every pulled receipt is kept as a piece in this browser, newest first.
   function readPieces() {
     try {
@@ -1387,7 +1601,7 @@
   function keepPiece() {
     const piece = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      nounIds: promptWords, rule, conditions, text: editor.value,
+      nounIds: promptWords, rule, conditions, daily: dailyNumber, text: editor.value,
       elapsedMs: writing.elapsedMs, resumed: writing.resumed, printedAt: new Date().toISOString()
     };
     // The same text pulled again stays one piece and moves to the top.
@@ -1420,7 +1634,8 @@
   }
 
   function pieceLabels(piece) {
-    return [labelFor(validRule(piece.rule)), ...conditionList(validConditions(piece.conditions))].filter(Boolean);
+    const daily = validDaily(piece.daily);
+    return [daily ? daily + '번 글감' : '', labelFor(validRule(piece.rule)), ...conditionList(validConditions(piece.conditions))].filter(Boolean);
   }
 
   // Opening a piece makes it the draft again, so every receipt action works as is.
@@ -1584,6 +1799,7 @@
       else if (action === 'download') downloadText();
       else if (action === 'share-prompt') sharePrompt(button);
       else if (action === 'share-image') shareReceiptImage(button);
+      else if (action === 'share-card') shareCard(button);
       else if (['reroll', 'pull', 'back'].includes(action) && button !== element(action)) element(action).click();
     });
   }
@@ -1634,7 +1850,7 @@
       }
     }
     const renderPromptDialog = () => {
-      if (kindSelect) kindSelect.value = isAdjective(promptWords[0]) ? 'adjective' : 'noun';
+      if (kindSelect) kindSelect.value = dailyNumber === dayNumber() ? 'daily' : isAdjective(promptWords[0]) ? 'adjective' : 'noun';
       ruleSelect.value = rule ? rule.type : '';
       ruleValue.hidden = !rule;
       ruleText.textContent = ruleLabel();
@@ -1646,11 +1862,18 @@
       renderPromptDialog();
     };
     promptDialog.addEventListener('gulgam:open', renderPromptDialog);
-    // Switching the kind redraws only the first word; the noun and the text stay.
+    // 오늘의 글감 brings back today's words. Another kind redraws only the first
+    // word and leaves the day's prompt; the noun and the text stay.
     kindSelect?.addEventListener('change', () => {
-      const adjective = kindSelect.value === 'adjective';
-      if (adjective === isAdjective(promptWords[0])) return;
-      promptWords = [adjective ? pickAdjective(promptWords[1]) : pickNoun(promptWords[1]), promptWords[1]];
+      if (kindSelect.value === 'daily') {
+        dailyNumber = dayNumber();
+        promptWords = dailyWords(dailyNumber).map(rememberWord);
+      } else {
+        const adjective = kindSelect.value === 'adjective';
+        if (adjective === isAdjective(promptWords[0]) && !dailyNumber) return;
+        promptWords = [adjective ? pickAdjective(promptWords[1]) : pickNoun(promptWords[1]), promptWords[1]];
+        dailyNumber = null;
+      }
       redrawClashingRule();
       commitPrompt();
     });
@@ -1704,9 +1927,10 @@
   // A link may have moved the clock or written a first sentence, even when its prompt matches the saved one.
   if (!linked && sameSavedPrompt(draft) && (draft.writingTime || !draft.text.trim())) showSaveStatus(initial.storage);
   else saveDraft();
-  // A received prompt shows at once; a first visit draws its prompt.
+  // A received prompt shows at once; a new day's prompt is revealed.
   if (linked) showToast('받은 글감으로 시작해요. ' + wordPair());
-  else if (!initial.record) revealPrompt(1000);
+  else if (freshPage) revealPrompt(1000);
+  else if (dailyWaiting) showToast('오늘의 글감 ' + today + '번이 나왔어요. 글감 설정에서 바꿀 수 있어요.');
   const desktopWriter = consoleReceipt
     ? navigator.maxTouchPoints === 0 || matchMedia('(hover: hover) and (pointer: fine)').matches
     : matchMedia('(min-width: 651px) and (pointer: fine)').matches;

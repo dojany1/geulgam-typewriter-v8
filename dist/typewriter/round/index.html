@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="hood.css">
   <link rel="stylesheet" href="../modes.css?v=6">
   <script defer src="../../words.js?v=6"></script>
-  <script defer src="../../app.js?v=10"></script>
+  <script defer src="../../app.js?v=11"></script>
   <script defer src="strike.js"></script>
   <script defer src="typesetter.js"></script>
 </head>
@@ -64,7 +64,7 @@
         <div class="paper-sheet" data-paper-sheet>
           <header class="context-bar">
             <div class="prompt">
-              <span class="prompt-label">오늘의 글감</span><span class="prompt-line" data-prompt-line hidden></span>
+              <span class="prompt-label" data-prompt-title>오늘의 글감</span><span class="prompt-line" data-prompt-line hidden></span>
               <h1 id="words"><span data-prompt-word></span> · <span data-prompt-word></span></h1>
               <span id="prompt-progress" class="visually-hidden" role="status" aria-atomic="true"></span>
             </div>
@@ -191,6 +191,7 @@
       <p id="receipt-kept" class="receipt-kept"></p>
       <div class="output-controls">
         <button id="back" type="button"><svg aria-hidden="true"><use href="#g-back"/></svg>다시 쓰기</button>
+        <button type="button" data-action="share-card">글 가리고 공유</button>
         <button type="button" data-action="share-image">영수증 이미지</button>
         <button type="button" data-action="share-prompt">글감 보내기</button>
         <button id="copy" type="button">글 복사</button>
@@ -202,7 +203,7 @@
   </main>
   <dialog id="prompt-dialog" aria-labelledby="prompt-title">
     <div class="dialog-heading"><h2 id="prompt-title">글감 설정</h2><button data-close-dialog aria-label="글감 설정 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>
-    <div class="setting-row"><label for="prompt-kind">글감 <small>형용사는 모양을 바꿔 써도 돼요</small></label><select id="prompt-kind" data-prompt-kind><option value="noun">명사 + 명사</option><option value="adjective">형용사 + 명사</option></select></div>
+    <div class="setting-row"><label for="prompt-kind">글감 <small>형용사는 모양을 바꿔 써도 돼요</small></label><select id="prompt-kind" data-prompt-kind><option value="daily">오늘의 글감</option><option value="noun">명사 + 명사</option><option value="adjective">형용사 + 명사</option></select></div>
     <div class="setting-row"><label for="prompt-rule">제약 <small>앱이 확인하고 글 뽑기를 막아요</small></label><select id="prompt-rule" data-prompt-rule><option value="">없음</option></select></div>
     <div class="prompt-value" data-prompt-value hidden><span data-rule-value></span><button type="button" data-redraw-rule>다른 값 뽑기</button></div>
     <div class="setting-row"><label for="prompt-pov">시점</label><select id="prompt-pov" data-prompt-condition="pov"><option value="">없음</option></select></div>
