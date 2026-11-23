@@ -47,6 +47,23 @@ for (const id of adjectiveIds) {
   }
 }
 
+// Given first and last sentences: they end with 다., stay short enough for one
+// receipt line, and never hold a prompt word, so a rule cannot write one.
+for (const [name, list] of [['openings', words.openings], ['endings', words.endings]]) {
+  const seen = new Set();
+  for (const sentence of list) {
+    if (sentence !== sentence.normalize('NFC')) fail(`${name}: "${sentence}" is not NFC`);
+    if (seen.has(sentence)) fail(`${name}: "${sentence}" appears twice`);
+    seen.add(sentence);
+    if (!sentence.endsWith('다.')) fail(`${name}: "${sentence}" should end with 다.`);
+    if (Array.from(sentence).length > 24) fail(`${name}: "${sentence}" is longer than 24 characters`);
+    for (const word of [...words.nouns, ...adjectiveIds]) {
+      const form = formsOf(word).find(candidate => sentence.includes(candidate));
+      if (form) fail(`${name}: "${sentence}" already holds the prompt word "${word}" as "${form}"`);
+    }
+  }
+}
+
 // Sentences that must, or must not, satisfy each word of a prompt.
 const examples = [
   [['조용한', '골목'], '조용히 골목을 걸었다.', []],
@@ -73,4 +90,5 @@ if (problems.length) {
   console.error(problems.length + ' problem(s) in dist/words.js:\n- ' + problems.join('\n- '));
   process.exit(1);
 }
-console.log(`dist/words.js ok: ${words.nouns.length} nouns, ${adjectiveIds.length} adjectives, ${examples.length} example sentences`);
+console.log(`dist/words.js ok: ${words.nouns.length} nouns, ${adjectiveIds.length} adjectives, `
+  + `${words.openings.length} openings, ${words.endings.length} endings, ${examples.length} example sentences`);

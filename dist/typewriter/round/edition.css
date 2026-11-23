@@ -85,6 +85,9 @@ body[data-edition="typewriter"] {
 }
 .prompt-actions svg { width: 13px; height: 13px; }
 .prompt-actions button:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+/* The paper header has no room for a sentence: it sits above the machine instead. */
+.paper-sheet .mission-line [data-sentence] { display: none; }
+.rule-sentence { width: min(100%, 710px); margin: 0 auto 10px; padding-inline: 9.5%; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: left; }
 .receipt-rule, .receipt-conditions { margin-top: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .receipt-rule + .receipt-conditions { margin-top: 2px; }
 .paper-sheet #editor {

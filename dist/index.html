@@ -20,10 +20,10 @@
   <meta name="twitter:description" content="무작위로 뽑힌 두 단어를 모두 넣어 짧은 글을 쓰고, 영수증으로 뽑아 친구에게 같은 글감을 보내요.">
   <meta name="twitter:image" content="/assets/og.png">
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="common.css?v=5">
+  <link rel="stylesheet" href="common.css?v=6">
   <link rel="stylesheet" href="styles.css?v=4">
-  <script src="words.js?v=5" defer></script>
-  <script src="app.js?v=7" defer></script>
+  <script src="words.js?v=6" defer></script>
+  <script src="app.js?v=8" defer></script>
 </head>
 <body data-view="write" data-edition="original">
   <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -118,7 +118,7 @@
   <dialog id="mission-dialog" aria-labelledby="mission-title">
     <div class="dialog-heading"><h2 id="mission-title">글감 조건</h2><button data-close-dialog aria-label="조건 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>
     <div class="setting-row"><label for="mission-kind">글감 <small>형용사는 모양을 바꿔 써도 돼요</small></label><select id="mission-kind" data-mission-kind><option value="noun">명사 + 명사</option><option value="adjective">형용사 + 명사</option></select></div>
-    <div class="setting-row"><label for="mission-rule">제약 <small>앱이 확인하고 글 뽑기를 막아요</small></label><select id="mission-rule" data-mission-rule><option value="">없음</option><option value="length">글자 수 제한</option><option value="timer">시간 제한</option><option value="ban">금지 표현</option></select></div>
+    <div class="setting-row"><label for="mission-rule">제약 <small>앱이 확인하고 글 뽑기를 막아요</small></label><select id="mission-rule" data-mission-rule><option value="">없음</option><option value="length">글자 수 제한</option><option value="timer">시간 제한</option><option value="ban">금지 표현</option><option value="first">첫 문장 지정</option><option value="last">끝 문장 지정</option></select></div>
     <div class="mission-value" data-mission-value hidden><span data-rule-value></span><button type="button" data-redraw-rule>다른 값 뽑기</button></div>
     <div class="setting-row"><label for="mission-pov">시점</label><select id="mission-pov" data-mission-condition="pov"><option value="">없음</option></select></div>
     <div class="setting-row"><label for="mission-mood">분위기</label><select id="mission-mood" data-mission-condition="mood"><option value="">없음</option></select></div>

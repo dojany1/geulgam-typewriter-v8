@@ -34,6 +34,7 @@ button:focus-visible, a:focus-visible, dialog button:focus-visible { outline: 2p
 [data-chip="rule"] { font-variant-numeric: tabular-nums; }
 [data-chip="rule"][data-used="false"], [data-chip="rule"][data-used="over"] { color: var(--accent); }
 [data-chip="condition"] { color: var(--muted); }
+[data-chip="rule"][data-sentence] { white-space: normal; }
 #words[data-drawing] [data-prompt-word]::after { visibility: hidden; }
 #words[data-drawing] [data-prompt-word]:not([data-landed]) { opacity: .5; }
 ::selection { background: light-dark(#c9c9c9,#545454); color: var(--fg); }

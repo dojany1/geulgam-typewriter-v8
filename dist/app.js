@@ -23,6 +23,7 @@
   const recentWords = { nouns: [], adjectives: [] };
   const carriage = document.querySelector('[data-carriage]');
   const missionLines = all('[data-mission-line]');
+  const ruleSentences = all('[data-rule-sentence]');
   const missionDialog = element('mission-dialog');
   const piecesDialog = element('pieces-dialog');
   const piecesKey = 'gulgam.pieces.v1';
@@ -113,8 +114,12 @@
   const ruleKinds = {
     length: { values: gulgamWords.lengths, label: value => value + '자 이내' },
     timer: { values: gulgamWords.minutes, label: value => value + '분 안에' },
-    ban: { values: gulgamWords.banned, label: value => '‘' + value + '’ 금지' }
+    ban: { values: gulgamWords.banned, label: value => '‘' + value + '’ 금지' },
+    first: { values: gulgamWords.openings, label: value => '첫 문장 ‘' + value + '’' },
+    last: { values: gulgamWords.endings, label: value => '끝 문장 ‘' + value + '’' }
   };
+  const sentenceRule = type => type === 'first' || type === 'last';
+  const textRule = type => type === 'ban' || sentenceRule(type);
   const conditionKeys = Object.keys(gulgamWords.conditions);
 
   function validRule(source) {
@@ -131,12 +136,20 @@
     return conditions;
   }
 
+  // A banned word inside a prompt word makes the prompt impossible, and a given
+  // sentence that already holds a prompt word would write it for the writer.
+  function ruleConflicts(candidate, words = promptWords) {
+    if (!candidate) return false;
+    if (candidate.type === 'ban') return words.some(word => clash(word, candidate.value));
+    if (sentenceRule(candidate.type)) return words.some(word => formsOf(word).some(form => candidate.value.includes(form)));
+    return false;
+  }
+
   function drawRule(type, avoid) {
     const kind = ruleKinds[type];
     if (!kind) return null;
     let values = kind.values;
-    // A banned word inside a prompt noun would make the prompt impossible.
-    if (type === 'ban') values = values.filter(word => !promptWords.some(prompt => clash(prompt, word)));
+    values = values.filter(value => !ruleConflicts({ type, value }));
     const pool = values.length > 1 ? values.filter(value => value !== avoid) : values;
     return pool.length ? { type, value: pool[Math.floor(Math.random() * pool.length)] } : null;
   }
@@ -146,7 +159,11 @@
     const params = new URLSearchParams(location.search);
     const words = (params.get('w') || '').split(',').map(word => word.trim().normalize('NFC')).filter(Boolean);
     if (!validPair(words)) return null;
-    const [type, value] = (params.get('r') || '').split(':');
+    // A sentence value may itself hold a colon, so split at the first one only.
+    const ruleParam = params.get('r') || '';
+    const split = ruleParam.indexOf(':');
+    const type = split < 0 ? ruleParam : ruleParam.slice(0, split);
+    const value = split < 0 ? '' : ruleParam.slice(split + 1);
     const conditions = {};
     for (const pair of (params.get('c') || '').split(',')) {
       const [key, chosen] = pair.split(':');
@@ -154,14 +171,15 @@
     }
     return {
       words,
-      rule: validRule({ type, value: type === 'ban' ? (value || '').normalize('NFC') : Number(value) }),
+      rule: validRule({ type, value: textRule(type) ? value.normalize('NFC') : Number(value) }),
       conditions: validConditions(conditions)
     };
   }
 
   function missionUrl() {
     const parts = ['w=' + promptWords.join(',')];
-    if (rule) parts.push('r=' + rule.type + ':' + rule.value);
+    // Encoded so a sentence's spaces do not cut the link short in a messenger.
+    if (rule) parts.push('r=' + rule.type + ':' + encodeURIComponent(rule.value));
     const chosen = conditionKeys.filter(key => conditions[key]).map(key => key + ':' + conditions[key]);
     if (chosen.length) parts.push('c=' + chosen.join(','));
     return location.origin + location.pathname + '?' + parts.join('&');
@@ -220,6 +238,8 @@
     writing = { elapsedMs: 0, since: editor.value.trim() ? Date.now() : null, resumed: false };
   }
   if (linked?.rule?.type === 'timer') restartClock();
+  // A received first sentence starts an empty page; written text is never touched.
+  if (linked?.rule?.type === 'first' && !editor.value.trim()) editor.value = linked.rule.value + ' ';
 
   function readWritingTime(record) {
     const saved = record.writingTime;
@@ -328,7 +348,48 @@
     if (!rule) return false;
     if (rule.type === 'length') return characterCount() > rule.value;
     if (rule.type === 'ban') return editor.value.normalize('NFC').includes(rule.value);
+    if (rule.type === 'first') return !sentenceCore(editor.value).startsWith(sentenceCore(rule.value));
+    if (rule.type === 'last') return !sentenceCore(editor.value).endsWith(sentenceCore(rule.value));
     return false;
+  }
+
+  // Given sentences match regardless of spacing and the closing punctuation.
+  function sentenceCore(text) {
+    return text.normalize('NFC').replace(/\s+/g, ' ').trim().replace(/[\s.!?…~'"’”」』)]+$/u, '');
+  }
+
+  // The app writes its own text into the editor as an ordinary input, so the
+  // screens redraw and the draft saves. A page holding only the app's text has
+  // no writing time yet.
+  function setEditorText(text, onlyAppText) {
+    editor.value = text;
+    editor.setSelectionRange(text.length, text.length);
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    if (!onlyAppText) return;
+    writing = { elapsedMs: 0, since: null, resumed: false };
+    saveDraft();
+  }
+
+  // A first-sentence rule writes its sentence onto an empty page. When the
+  // sentence changes, the old one is swapped only where the text still starts
+  // with it; when the rule goes, an untouched page is cleared. Writing that is
+  // the writer's own is never removed.
+  function syncOpening(previous) {
+    const text = editor.value.trim();
+    const old = previous?.type === 'first' ? previous.value : null;
+    const untouched = old !== null && text === old;
+    if (rule?.type === 'first') {
+      if (text === rule.value) return;
+      if (!text || untouched) {
+        setEditorText(rule.value + ' ', true);
+        showToast('첫 문장을 적어 뒀어요. 이어서 써 보세요.');
+      } else if (old !== null && editor.value.trimStart().startsWith(old)) {
+        setEditorText(rule.value + editor.value.trimStart().slice(old.length), false);
+        showToast('첫 문장을 바꿔 적었어요.');
+      }
+    } else if (untouched) {
+      setEditorText('', true);
+    }
   }
 
   // The clock starts with the first keystroke and never locks the writer out:
@@ -354,12 +415,22 @@
     const timer = timerState();
     const chips = [];
     if (rule) {
-      chips.push({
-        text: timer ? ruleLabel() + ' · ' + timerDisplay(timer) : ruleLabel(),
-        kind: 'rule', used: timer ? (timer.over ? 'over' : 'ticking') : String(!ruleBroken())
-      });
+      const sentence = sentenceRule(rule.type);
+      let used = String(!ruleBroken());
+      if (timer) used = timer.over ? 'over' : 'ticking';
+      // A given sentence not written yet is pending, not broken.
+      else if (sentence && used === 'false') used = 'pending';
+      chips.push({ text: timer ? ruleLabel() + ' · ' + timerDisplay(timer) : ruleLabel(), kind: 'rule', used, sentence });
     }
     for (const value of conditionLabels()) chips.push({ text: value, kind: 'condition' });
+    // Screens without room in the prompt header show a given sentence on a line of its own.
+    const sentenceChip = chips.find(chip => chip.sentence);
+    for (const line of ruleSentences) {
+      line.hidden = !sentenceChip;
+      if (!sentenceChip) continue;
+      if (line.textContent !== sentenceChip.text) line.textContent = sentenceChip.text;
+      if (line.dataset.used !== sentenceChip.used) line.dataset.used = sentenceChip.used;
+    }
     const signature = JSON.stringify(chips);
     for (const line of missionLines) {
       line.hidden = chips.length === 0;
@@ -370,6 +441,7 @@
         span.textContent = chip.text;
         span.dataset.chip = chip.kind;
         if (chip.used) span.dataset.used = chip.used;
+        if (chip.sentence) span.dataset.sentence = '';
         return span;
       }));
     }
@@ -394,6 +466,8 @@
     let progress;
     if (missing.length) progress = '남은 글감 ' + missing.join(', ');
     else if (broken && rule.type === 'length') progress = rule.value + '자를 넘었어요. 지금 ' + count + '자';
+    else if (broken && rule.type === 'first') progress = '‘' + rule.value + '’로 시작해야 뽑을 수 있어요.';
+    else if (broken && rule.type === 'last') progress = '‘' + rule.value + '’로 끝내야 뽑을 수 있어요.';
     else if (broken) progress = '‘' + rule.value + '’ 없이 써야 뽑을 수 있어요.';
     else progress = '두 단어를 모두 썼어요. 글을 뽑을 수 있어요.';
     if (timerState()?.over) progress = '시간이 다 됐어요. ' + progress;
@@ -887,7 +961,7 @@
 
   element('reroll').addEventListener('click', () => {
     promptWords = newPrompt(isAdjective(promptWords[0]));
-    if (rule?.type === 'ban' && promptWords.some(word => clash(word, rule.value))) rule = drawRule('ban');
+    if (ruleConflicts(rule)) rule = drawRule(rule.type);
     renderEditor();
     saveDraft();
     if (document.body.dataset.view === 'receipt') {
@@ -1116,7 +1190,10 @@
     const maxLines = 34;
     const clipped = lines.length > maxLines;
     if (clipped) lines = lines.slice(0, maxLines);
-    const metaLines = [receiptRuleText(), conditionLabels().join(' · ')].filter(Boolean);
+    // A given sentence can outgrow one line of the slip.
+    context.font = '500 28px ' + sans;
+    const metaLines = [receiptRuleText(), conditionLabels().join(' · ')].filter(Boolean)
+      .flatMap(line => wrapLines(context, line, right - left));
     const blocks = {
       header: 128, nouns: promptWords.length * 84 + 12, meta: metaLines.length * 44 + (metaLines.length ? 12 : 0),
       body: lines.length * bodyLine + (clipped ? 52 : 0) + 24, footer: 104
@@ -1518,17 +1595,21 @@
       const adjective = kindSelect.value === 'adjective';
       if (adjective === isAdjective(promptWords[0])) return;
       promptWords = [adjective ? pickAdjective(promptWords[1]) : pickNoun(promptWords[1]), promptWords[1]];
-      if (rule?.type === 'ban' && promptWords.some(word => clash(word, rule.value))) rule = drawRule('ban');
+      if (ruleConflicts(rule)) rule = drawRule(rule.type);
       commitMission();
     });
     ruleSelect.addEventListener('change', () => {
+      const previous = rule;
       rule = drawRule(ruleSelect.value);
       if (rule?.type === 'timer') restartClock();
+      syncOpening(previous);
       commitMission();
     });
     redraw.addEventListener('click', () => {
+      const previous = rule;
       if (rule) rule = drawRule(rule.type, rule.value);
       if (rule?.type === 'timer') restartClock();
+      syncOpening(previous);
       commitMission();
     });
     for (const select of conditionSelects) {
