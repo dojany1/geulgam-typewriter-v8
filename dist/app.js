@@ -18,7 +18,7 @@
   const typewriter = document.body.dataset.edition === 'typewriter' || /(^|\/)typewriter\//.test(location.pathname);
   const soundKey = typewriter ? 'gulgam.sound.v1' : 'gulgam.original.sound.v1';
   const themeKey = 'gulgam.theme.v1';
-  const recentNouns = [];
+  const recentWords = { nouns: [], adjectives: [] };
   const carriage = document.querySelector('[data-carriage]');
   const missionLines = all('[data-mission-line]');
   const missionDialog = element('mission-dialog');
@@ -71,16 +71,39 @@
     }
   }
 
-  function rememberNoun(word) {
-    recentNouns.push(word);
-    if (recentNouns.length > 10) recentNouns.shift();
+  const adjectiveIds = Object.keys(gulgamWords.adjectives);
+  const isAdjective = word => typeof word === 'string' && Object.hasOwn(gulgamWords.adjectives, word);
+  // A noun counts when written as is; an adjective counts in any of its listed forms.
+  const formsOf = word => isAdjective(word) ? [word, ...gulgamWords.adjectives[word]] : [word];
+  // Two words clash when writing one would satisfy, or break, the other.
+  const clash = (a, b) => formsOf(a).some(x => formsOf(b).some(y => x.includes(y) || y.includes(x)));
+
+  function rememberWord(word) {
+    const recent = recentWords[isAdjective(word) ? 'adjectives' : 'nouns'];
+    recent.push(word);
+    if (recent.length > 10) recent.shift();
     return word;
   }
 
-  function pickNoun() {
-    const available = gulgamWords.nouns.filter(word => !recentNouns.includes(word));
-    return rememberNoun(available[Math.floor(Math.random() * available.length)]);
+  function pickFrom(list, recent, partner) {
+    const fits = word => !partner || (word !== partner && !clash(word, partner));
+    const fresh = list.filter(word => !recent.includes(word) && fits(word));
+    const pool = fresh.length ? fresh : list.filter(fits);
+    return rememberWord(pool[Math.floor(Math.random() * pool.length)]);
   }
+
+  const pickNoun = partner => pickFrom(gulgamWords.nouns, recentWords.nouns, partner);
+  const pickAdjective = partner => pickFrom(adjectiveIds, recentWords.adjectives, partner);
+
+  // The first word may be an adjective; the second is always a noun.
+  function newPrompt(adjective) {
+    const first = adjective ? pickAdjective() : pickNoun();
+    return [first, pickNoun(first)];
+  }
+
+  const validPair = words => words.length === 2 && words[0] !== words[1]
+    && (gulgamWords.nouns.includes(words[0]) || isAdjective(words[0]))
+    && gulgamWords.nouns.includes(words[1]) && !clash(words[0], words[1]);
 
   // A rule is judged here and can hold the receipt back. Conditions (viewpoint,
   // mood, form) are only printed on the slip; whoever reads it judges those.
@@ -110,7 +133,7 @@
     if (!kind) return null;
     let values = kind.values;
     // A banned word inside a prompt noun would make the prompt impossible.
-    if (type === 'ban') values = values.filter(word => !promptNouns.some(noun => noun.includes(word) || word.includes(noun)));
+    if (type === 'ban') values = values.filter(word => !promptWords.some(prompt => clash(prompt, word)));
     const pool = values.length > 1 ? values.filter(value => value !== avoid) : values;
     return pool.length ? { type, value: pool[Math.floor(Math.random() * pool.length)] } : null;
   }
@@ -118,8 +141,8 @@
   // A shared link carries the whole prompt: ?w=연필,치킨&r=length:150&c=pov:2인칭,mood:공포
   function readLink() {
     const params = new URLSearchParams(location.search);
-    const nouns = (params.get('w') || '').split(',').map(word => word.trim().normalize('NFC')).filter(Boolean);
-    if (nouns.length !== 2 || nouns[0] === nouns[1] || !nouns.every(word => gulgamWords.nouns.includes(word))) return null;
+    const words = (params.get('w') || '').split(',').map(word => word.trim().normalize('NFC')).filter(Boolean);
+    if (!validPair(words)) return null;
     const [type, value] = (params.get('r') || '').split(':');
     const conditions = {};
     for (const pair of (params.get('c') || '').split(',')) {
@@ -127,14 +150,14 @@
       if (key && chosen) conditions[key] = chosen;
     }
     return {
-      nouns,
+      words,
       rule: validRule({ type, value: type === 'ban' ? (value || '').normalize('NFC') : Number(value) }),
       conditions: validConditions(conditions)
     };
   }
 
   function missionUrl() {
-    const parts = ['w=' + promptNouns.join(',')];
+    const parts = ['w=' + promptWords.join(',')];
     if (rule) parts.push('r=' + rule.type + ':' + rule.value);
     const chosen = conditionKeys.filter(key => conditions[key]).map(key => key + ':' + conditions[key]);
     if (chosen.length) parts.push('c=' + chosen.join(','));
@@ -143,14 +166,14 @@
 
   function readPrompt(record) {
     const [savedFirst, savedSecond] = Array.isArray(record.nounIds) ? record.nounIds : [record.nounId];
-    const first = gulgamWords.nouns.includes(savedFirst) ? rememberNoun(savedFirst) : pickNoun();
-    if (savedSecond !== first && gulgamWords.nouns.includes(savedSecond)) {
-      return [first, rememberNoun(savedSecond)];
+    const first = gulgamWords.nouns.includes(savedFirst) || isAdjective(savedFirst) ? rememberWord(savedFirst) : pickNoun();
+    if (savedSecond !== first && gulgamWords.nouns.includes(savedSecond) && !clash(first, savedSecond)) {
+      return [first, rememberWord(savedSecond)];
     }
     // Give an existing draft credit for a second noun its author already used.
     const text = (record.text || '').normalize('NFC');
-    const inDraft = gulgamWords.nouns.find(word => word !== first && text.includes(word));
-    return [first, inDraft ? rememberNoun(inDraft) : pickNoun()];
+    const inDraft = gulgamWords.nouns.find(word => word !== first && !clash(first, word) && text.includes(word));
+    return [first, inDraft ? rememberWord(inDraft) : pickNoun(first)];
   }
 
   function displayDate(date = new Date()) {
@@ -175,13 +198,13 @@
   const draft = initial.record || {};
   let lastEditTime = modifiedTime(draft);
   let recoverableText = draft.text || '';
-  let promptNouns = readPrompt(draft);
+  let promptWords = readPrompt(draft);
   let rule = validRule(draft.rule);
   let conditions = validConditions(draft.conditions);
   const linked = readLink();
   if (linked) {
     // A received prompt replaces the saved one. Text being written stays, as with 다른 글감.
-    promptNouns = linked.nouns.map(rememberNoun);
+    promptWords = linked.words.map(rememberWord);
     rule = linked.rule;
     conditions = linked.conditions;
     history.replaceState(null, '', location.pathname);
@@ -227,7 +250,7 @@
   }
 
   function wordPair() {
-    return promptNouns.join(' · ');
+    return promptWords.join(' · ');
   }
 
   function missionSignature(nouns, savedRule, savedConditions) {
@@ -237,7 +260,7 @@
   function sameSavedPrompt(record) {
     return (record.version === 2 || record.version === 3) && Array.isArray(record.nounIds) && record.nounIds.length === 2
       && missionSignature(record.nounIds, validRule(record.rule), validConditions(record.conditions))
-        === missionSignature(promptNouns, rule, conditions);
+        === missionSignature(promptWords, rule, conditions);
   }
 
   const saveMessages = {
@@ -257,7 +280,7 @@
   function saveDraft() {
     lastEditTime = Math.max(Date.now(), lastEditTime + 1);
     const serialized = JSON.stringify({
-      version: 3, nounIds: promptNouns, rule, conditions,
+      version: 3, nounIds: promptWords, rule, conditions,
       text: editor.value, writingTime: writing, updatedAt: new Date(lastEditTime).toISOString()
     });
     try {
@@ -293,7 +316,7 @@
 
   function missingPromptWords() {
     const text = editor.value.normalize('NFC');
-    return promptNouns.filter(word => !text.includes(word));
+    return promptWords.filter(word => !formsOf(word).some(form => text.includes(form)));
   }
 
   const characterCount = () => Array.from(editor.value).length;
@@ -352,13 +375,15 @@
   function renderEditor() {
     const count = characterCount();
     element('word-count').textContent = count.toLocaleString('ko-KR') + '자';
+    const hint = isAdjective(promptWords[0]) ? '두 단어를 넣어 써보세요. 형용사는 모양을 바꿔 써도 돼요.' : '두 단어를 넣어 자유롭게 써보세요.';
+    if (editor.placeholder !== hint) editor.placeholder = hint;
     const empty = !editor.value.trim();
     for (const button of draftActions) button.disabled = empty;
     const missing = missingPromptWords();
     const broken = ruleBroken();
     for (const button of printButtons) button.disabled = missing.length > 0 || broken;
     promptLabels.forEach((label, index) => {
-      const word = promptNouns[index];
+      const word = promptWords[index];
       if (label.textContent !== word) label.textContent = word;
       const used = String(!missing.includes(word));
       if (label.dataset.used !== used) label.dataset.used = used;
@@ -402,7 +427,7 @@
     writing = readWritingTime(latest);
     recoverableText = latest.text;
     if (!sameSavedPrompt(latest)) {
-      promptNouns = readPrompt(latest);
+      promptWords = readPrompt(latest);
       rule = validRule(latest.rule);
       conditions = validConditions(latest.conditions);
     }
@@ -797,8 +822,8 @@
   });
 
   element('reroll').addEventListener('click', () => {
-    promptNouns = [pickNoun(), pickNoun()];
-    if (rule?.type === 'ban' && promptNouns.some(noun => noun.includes(rule.value) || rule.value.includes(noun))) rule = drawRule('ban');
+    promptWords = newPrompt(isAdjective(promptWords[0]));
+    if (rule?.type === 'ban' && promptWords.some(word => clash(word, rule.value))) rule = drawRule('ban');
     renderEditor();
     saveDraft();
     if (document.body.dataset.view === 'receipt') {
@@ -845,8 +870,8 @@
     conditionLine.textContent = conditionLabels().join(' · ');
     conditionLine.hidden = conditionLabels().length === 0;
     if (consoleReceipt) {
-      element('receipt-word-1').textContent = promptNouns[0];
-      element('receipt-word-2').textContent = promptNouns[1];
+      element('receipt-word-1').textContent = promptWords[0];
+      element('receipt-word-2').textContent = promptWords[1];
       element('receipt-elapsed').textContent = displayWritingTime();
       document.dispatchEvent(new CustomEvent('gulgam:receipt', {
         detail: { text: editor.value, animate, playSound: kind => playSound(kind, 'receipt') }
@@ -927,7 +952,7 @@
 
   function downloadText() {
     if (!editor.value) return;
-    downloadBlob(new Blob([editor.value], { type: 'text/plain;charset=utf-8' }), 'GULGAM-' + promptNouns.join('-') + '.txt');
+    downloadBlob(new Blob([editor.value], { type: 'text/plain;charset=utf-8' }), 'GULGAM-' + promptWords.join('-') + '.txt');
   }
 
   // A phone gets the system share sheet; a desktop gets the link or the file.
@@ -1028,7 +1053,7 @@
     if (clipped) lines = lines.slice(0, maxLines);
     const metaLines = [receiptRuleText(), conditionLabels().join(' · ')].filter(Boolean);
     const blocks = {
-      header: 128, nouns: promptNouns.length * 84 + 12, meta: metaLines.length * 44 + (metaLines.length ? 12 : 0),
+      header: 128, nouns: promptWords.length * 84 + 12, meta: metaLines.length * 44 + (metaLines.length ? 12 : 0),
       body: lines.length * bodyLine + (clipped ? 52 : 0) + 24, footer: 104
     };
     const slipHeight = inset * 2 + blocks.header + blocks.nouns + blocks.meta + blocks.body + blocks.footer + 36 * 3;
@@ -1070,7 +1095,7 @@
     y += 36;
     context.fillStyle = ink;
     context.font = '400 68px ' + sans;
-    for (const noun of promptNouns) {
+    for (const noun of promptWords) {
       y += 72;
       context.fillText(noun, left, y);
       y += 12;
@@ -1130,7 +1155,7 @@
       showToast('영수증 이미지를 만들지 못했어요.');
       return;
     }
-    const name = 'GULGAM-' + promptNouns.join('-') + '.png';
+    const name = 'GULGAM-' + promptWords.join('-') + '.png';
     const file = new File([blob], name, { type: 'image/png' });
     if (touchSharing() && navigator.canShare?.({ files: [file] })) {
       try {
@@ -1171,7 +1196,7 @@
   function keepPiece() {
     const piece = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      nounIds: promptNouns, rule, conditions, text: editor.value,
+      nounIds: promptWords, rule, conditions, text: editor.value,
       elapsedMs: writing.elapsedMs, resumed: writing.resumed, printedAt: new Date().toISOString()
     };
     // The same text pulled again stays one piece and moves to the top.
@@ -1204,7 +1229,7 @@
     const current = editor.value;
     const unsaved = current.trim() && current !== piece.text && !readPieces().some(saved => saved.text === current);
     if (unsaved && !window.confirm('쓰던 글을 이 글로 바꿀까요? 쓰던 글은 사라져요.')) return;
-    promptNouns = readPrompt(piece);
+    promptWords = readPrompt(piece);
     rule = validRule(piece.rule);
     conditions = validConditions(piece.conditions);
     editor.value = piece.text;
@@ -1398,6 +1423,7 @@
   // A limit that already ran out before this visit waits for a manual pull.
   let timerDone = Boolean(timerState()?.over);
   if (missionDialog) {
+    const kindSelect = missionDialog.querySelector('[data-mission-kind]');
     const ruleSelect = missionDialog.querySelector('[data-mission-rule]');
     const ruleValue = missionDialog.querySelector('[data-mission-value]');
     const ruleText = missionDialog.querySelector('[data-rule-value]');
@@ -1409,6 +1435,7 @@
       }
     }
     const renderMissionDialog = () => {
+      if (kindSelect) kindSelect.value = isAdjective(promptWords[0]) ? 'adjective' : 'noun';
       ruleSelect.value = rule ? rule.type : '';
       ruleValue.hidden = !rule;
       ruleText.textContent = ruleLabel();
@@ -1421,6 +1448,14 @@
       renderMissionDialog();
     };
     missionDialog.addEventListener('gulgam:open', renderMissionDialog);
+    // Switching the kind redraws only the first word; the noun and the text stay.
+    kindSelect?.addEventListener('change', () => {
+      const adjective = kindSelect.value === 'adjective';
+      if (adjective === isAdjective(promptWords[0])) return;
+      promptWords = [adjective ? pickAdjective(promptWords[1]) : pickNoun(promptWords[1]), promptWords[1]];
+      if (rule?.type === 'ban' && promptWords.some(word => clash(word, rule.value))) rule = drawRule('ban');
+      commitMission();
+    });
     ruleSelect.addEventListener('change', () => {
       rule = drawRule(ruleSelect.value);
       if (rule?.type === 'timer') restartClock();
