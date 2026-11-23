@@ -11,6 +11,8 @@
   const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="share-image"]');
   const printButtons = all('#pull, [data-action="pull"]');
   const promptLabels = all('#words [data-prompt-word]');
+  const promptHeading = element('words');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const promptProgress = element('prompt-progress');
   const lineCounters = all('[data-line-count]');
   const draftStates = all('[data-draft-state]');
@@ -26,6 +28,7 @@
   const piecesKey = 'gulgam.pieces.v1';
   const pieceLimit = 200;
   let toastTimer;
+  let drawing = null;
   let composing = false;
 
   function readStored(key) {
@@ -384,7 +387,7 @@
     for (const button of printButtons) button.disabled = missing.length > 0 || broken;
     promptLabels.forEach((label, index) => {
       const word = promptWords[index];
-      if (label.textContent !== word) label.textContent = word;
+      if (!drawing && label.textContent !== word) label.textContent = word;
       const used = String(!missing.includes(word));
       if (label.dataset.used !== used) label.dataset.used = used;
     });
@@ -412,6 +415,67 @@
     editor.addEventListener('keyup', updateCarriage);
     editor.addEventListener('click', updateCarriage);
   }
+
+  // Drawing a prompt flips each word through candidates of the same length,
+  // like a slot reel, and lands it with a key strike: one word after another,
+  // within `duration`. The prompt is already decided and saved; only the labels
+  // are borrowed. A tap or key press lands everything at once.
+  function landDraw() {
+    if (!drawing) return;
+    clearTimeout(drawing.timer);
+    drawing = null;
+    delete promptHeading.dataset.drawing;
+    promptHeading.removeAttribute('aria-busy');
+    for (const label of promptLabels) delete label.dataset.landed;
+    renderEditor();
+  }
+
+  function drawPrompt(duration) {
+    landDraw();
+    if (!promptHeading || promptLabels.length !== promptWords.length || reducedMotion.matches || document.hidden) return;
+    const pools = promptWords.map(word => {
+      const list = isAdjective(word) ? adjectiveIds : gulgamWords.nouns;
+      const length = Array.from(word).length;
+      const same = list.filter(other => other !== word && Array.from(other).length === length);
+      return same.length >= 3 ? same : list.filter(other => other !== word);
+    });
+    const landAt = promptWords.map((_, index) => duration * (index + 1) / promptWords.length);
+    const start = performance.now();
+    const run = { timer: 0 };
+    drawing = run;
+    promptHeading.dataset.drawing = '';
+    promptHeading.setAttribute('aria-busy', 'true');
+    const step = () => {
+      if (drawing !== run) return;
+      const elapsed = performance.now() - start;
+      promptLabels.forEach((label, index) => {
+        if ('landed' in label.dataset) return;
+        if (elapsed >= landAt[index]) {
+          label.textContent = promptWords[index];
+          label.dataset.landed = '';
+          playSound('key');
+          return;
+        }
+        const pool = pools[index];
+        let next = label.textContent;
+        while (next === label.textContent && pool.length > 1) next = pool[Math.floor(Math.random() * pool.length)];
+        label.textContent = next;
+      });
+      if (promptLabels.every(label => 'landed' in label.dataset)) {
+        landDraw();
+        return;
+      }
+      // Flip fast at first and slow toward the last landing, without overshooting the next one.
+      const nextLanding = Math.min(...landAt.filter((_, index) => !('landed' in promptLabels[index].dataset)));
+      run.timer = setTimeout(step, Math.max(16, Math.min(40 + 80 * elapsed / duration, nextLanding - elapsed)));
+    };
+    step();
+  }
+
+  for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, landDraw, true);
+  // Mobile keyboards may insert text without a usable keydown.
+  editor.addEventListener('beforeinput', landDraw);
+  document.addEventListener('visibilitychange', landDraw);
 
   function restoreCurrentDraft() {
     // A cached page can miss storage events. Read the same record as a fresh
@@ -830,6 +894,7 @@
       setView('write');
       editor.focus({ preventScroll: true });
     }
+    drawPrompt(600);
   });
 
   // After a pointer-operated adjustment desktop writers can keep typing.
@@ -1494,7 +1559,9 @@
   renderEditor();
   if (sameSavedPrompt(draft) && (draft.writingTime || !draft.text.trim())) showSaveStatus(initial.storage);
   else saveDraft();
+  // A received prompt shows at once; a first visit draws its prompt.
   if (linked) showToast('받은 글감으로 시작해요. ' + wordPair());
+  else if (!initial.record) drawPrompt(1000);
   const desktopWriter = consoleReceipt
     ? navigator.maxTouchPoints === 0 || matchMedia('(hover: hover) and (pointer: fine)').matches
     : matchMedia('(min-width: 651px) and (pointer: fine)').matches;
