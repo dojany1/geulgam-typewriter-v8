@@ -22,9 +22,9 @@
   <meta name="twitter:image" content="https://gulgam.dokhustudio.com/assets/og.png">
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="common.css?v=8">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
   <script src="words.js?v=6" defer></script>
-  <script src="app.js?v=16" defer></script>
+  <script src="app.js?v=17" defer></script>
 </head>
 <body data-view="write" data-edition="original">
   <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -89,10 +89,18 @@
       </footer>
     </section>
     <section id="receipt-view" hidden aria-label="글 영수증">
-      <div class="result-area">
-        <h1 id="receipt-focus" tabindex="-1">글 영수증</h1>
-        <div class="result-meta"><span id="receipt-words"></span><span id="receipt-date"></span><span id="receipt-rule" hidden></span><span id="receipt-conditions" hidden></span></div>
-        <div id="receipt-text"></div>
+      <div class="printer">
+        <div class="printer-slot" aria-hidden="true"></div>
+        <div class="receipt-feed">
+          <article class="receipt-paper">
+            <header class="paper-head"><span class="logotype" aria-hidden="true" lang="en">gul<strong>gam</strong></span><h1 id="receipt-focus" tabindex="-1">글 영수증</h1></header>
+            <div class="paper-date" id="receipt-date"></div>
+            <div class="paper-words" id="receipt-words"></div>
+            <div class="result-meta"><span id="receipt-rule" hidden></span><span id="receipt-conditions" hidden></span></div>
+            <div id="receipt-text"></div>
+            <div class="paper-foot"><span id="receipt-stats"></span><span class="paper-host" lang="en" data-host></span></div>
+          </article>
+        </div>
       </div>
       <footer class="result-tools">
         <button id="back" type="button">← 다시 쓰기</button><span id="receipt-length"></span><span id="receipt-kept" class="receipt-kept"></span>

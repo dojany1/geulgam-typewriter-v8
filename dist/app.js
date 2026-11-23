@@ -884,6 +884,18 @@
     knock(release + .001, 227 * pitch, .029, .16);
   }
 
+  // A thermal printer for as long as the paper feeds: short bursts of filtered
+  // noise under the head's quick clicks, and a snap as it stops.
+  function printerSound(seconds) {
+    if (!startAudio()) return;
+    const at = audio.currentTime + 0.004;
+    for (let t = 0; t < seconds; t += 0.045) {
+      burst(at + t, 0.05, 1500 + Math.random() * 300, 0.09);
+      knock(at + t, 110 + Math.random() * 25, 0.018, 0.06);
+    }
+    burst(at + seconds, 0.07, 2600, 0.2);
+  }
+
   function playSound(kind, role) {
     if (!startAudio()) {
       if (!roundKeys || kind !== 'return') return;
@@ -1233,7 +1245,48 @@
       element('receipt-words').textContent = wordPair();
       element('receipt-date').textContent = displayDate();
       element('receipt-length').textContent = element('word-count').textContent;
+      element('receipt-stats').textContent = displayWritingTime() + ' · ' + characterCount().toLocaleString('ko-KR') + '자';
+      for (const host of all('[data-host]')) host.textContent = location.host;
+      if (animate) feedPaper();
     }
+  }
+
+  // The basic receipt prints out of a slot: the paper feeds down in printer-line
+  // steps for about as long as it is tall, with a thermal-printer whir. A tap or a
+  // key shows it whole at once.
+  let paperFed = null;
+  function feedPaper() {
+    const paper = document.querySelector('.receipt-paper');
+    if (!paper) return;
+    paperFed?.();
+    const height = paper.offsetHeight;
+    const ms = Math.round(Math.min(2600, 650 + height * 2));
+    paper.style.animationDuration = ms + 'ms';
+    paper.style.animationTimingFunction = 'steps(' + Math.max(10, Math.round(height / 12)) + ', end)';
+    paper.classList.remove('feeding');
+    void paper.offsetWidth;
+    paper.classList.add('feeding');
+    document.body.dataset.printing = '';
+    printerSound(ms / 1000);
+    // A page in the background may pause the animation; the timer still lands it.
+    const fallback = setTimeout(() => land(), ms + 500);
+    const land = () => {
+      clearTimeout(fallback);
+      paper.classList.remove('feeding');
+      delete document.body.dataset.printing;
+      paper.removeEventListener('animationend', land);
+      document.removeEventListener('pointerdown', land, true);
+      document.removeEventListener('keydown', land, true);
+      paperFed = null;
+    };
+    paperFed = land;
+    paper.addEventListener('animationend', land);
+    // The key or tap that pulled the receipt is over by the time these listen.
+    setTimeout(() => {
+      if (paperFed !== land) return;
+      document.addEventListener('pointerdown', land, true);
+      document.addEventListener('keydown', land, true);
+    });
   }
 
   element('pull').addEventListener('click', () => {
