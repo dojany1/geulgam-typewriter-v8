@@ -1009,6 +1009,9 @@
       showToast('아직 뽑을 수 없어요. ' + promptProgress.textContent);
       return;
     }
+    // An Enter on an empty line ends any composition, even one whose end event a
+    // phone keyboard never sent.
+    if (fromEnter) composing = false;
     element('pull').click();
     enterEnding = fromEnter && document.body.dataset.view === 'receipt' ? editor.value : null;
   }
@@ -1046,14 +1049,10 @@
       // An IME may send compositionend just before the Enter that commits it.
       commitReturn = composing || event.isComposing || event.keyCode === 229 || recentIMECommit();
       shiftReturn = event.shiftKey;
-      if (!commitReturn && !shiftReturn && onEmptyLastLine()) {
-        if (element('pull').disabled) {
-          nudgeFinish();
-        } else {
-          event.preventDefault();
-          if (!event.repeat) finishWriting(true);
-          return;
-        }
+      if (!commitReturn && !shiftReturn && onEmptyLastLine() && !element('pull').disabled) {
+        event.preventDefault();
+        if (!event.repeat) finishWriting(true);
+        return;
       }
     }
     const composingKey = (event.isComposing || event.key === 'Process')
@@ -1083,14 +1082,10 @@
     if (consoleReceipt && editor.hasAttribute('data-virtual-edit')) return;
     // Soft keyboards often send a line break with no usable keydown.
     if ((event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak')
-        && !composing && !event.isComposing && !shiftReturn && onEmptyLastLine()) {
-      if (element('pull').disabled) {
-        nudgeFinish();
-      } else {
-        if (event.cancelable) event.preventDefault();
-        finishWriting(true);
-        return;
-      }
+        && !composing && !event.isComposing && !shiftReturn && onEmptyLastLine() && !element('pull').disabled) {
+      if (event.cancelable) event.preventDefault();
+      finishWriting(true);
+      return;
     }
     // A mobile IME may only send beforeinput. Hardware already sounds at
     // keydown; ignoring its follow-up input also avoids double-sounding Hangul.
@@ -1118,10 +1113,24 @@
     if (event.key === 'Enter') { shiftReturn = false; commitReturn = false; }
   });
   editor.addEventListener('blur', () => { shiftReturn = false; commitReturn = false; });
+  // Whatever events a keyboard sends, the text shows a second Enter: a line break
+  // typed at the end right after an empty line. Ready, it ends the writing (for
+  // keyboards that slipped past keydown and beforeinput); not ready, the blank
+  // line stays and the writer is told what is left.
+  let previousText = editor.value;
   editor.addEventListener('input', () => {
+    const before = previousText;
+    previousText = editor.value;
     updateWritingTime();
     const wasReady = !element('pull').disabled;
     renderEditor();
+    const secondEnter = !shiftReturn && editor.value === before + '\n' && /\n[^\S\n]*\n$/.test(editor.value)
+      && editor.selectionStart === editor.value.length && document.body.dataset.view === 'write';
+    if (secondEnter) {
+      saveDraft();
+      finishWriting(true);
+      return;
+    }
     if (!wasReady && !element('pull').disabled) showToast('이제 글을 뽑을 수 있어요. 다 쓰면 엔터 두 번!');
     saveDraft();
   });
