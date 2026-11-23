@@ -26,8 +26,8 @@
   <link rel="stylesheet" href="edition.css?v=4">
   <link rel="stylesheet" href="modes.css?v=6">
   <script defer src="../words.js?v=6"></script>
-  <script defer src="../app.js?v=15"></script>
-  <script defer src="strike.js?v=2"></script>
+  <script defer src="../app.js?v=16"></script>
+  <script defer src="strike.js?v=3"></script>
   <script defer src="typesetter.js"></script>
 </head>
 <body data-edition="typewriter" data-view="write">
@@ -109,7 +109,7 @@
           <button type="button" data-code="KeyJ" aria-label="ㅓ (J)"><span data-key-primary>ㅓ</span><span data-key-secondary>J</span></button>
           <button type="button" data-code="KeyK" aria-label="ㅏ (K)"><span data-key-primary>ㅏ</span><span data-key-secondary>K</span></button>
           <button type="button" data-code="KeyL" aria-label="ㅣ (L)"><span data-key-primary>ㅣ</span><span data-key-secondary>L</span></button>
-          <button type="button" class="function-key" data-code="Enter" aria-label="Enter · 줄바꿈, 빈 줄에서 한 번 더 누르면 글 뽑기"><span aria-hidden="true" class="key-symbol">↵</span><span class="key-name">Enter</span></button>
+          <button type="button" class="function-key" data-code="Enter" aria-label="Enter · 글 뽑기"><span aria-hidden="true" class="key-symbol">↵</span><span class="key-name">Enter</span></button>
         </div>
         <div class="key-row">
           <button type="button" class="function-key" data-code="ShiftLeft" aria-label="왼쪽 Shift" aria-pressed="false"><span aria-hidden="true" class="key-symbol">⇧</span><span class="key-name">Shift</span></button>
@@ -140,8 +140,8 @@
             <button type="button" data-action="download" disabled>TXT 저장</button>
           </div>
         </div>
-        <span id="editor-shortcuts"><kbd>Enter</kbd> 두 번으로 글 뽑기</span>
-        <button id="pull" class="print-button" type="button" title="Enter 두 번으로 글 뽑기" disabled>글 뽑기<svg aria-hidden="true"><use href="#g-enter"/></svg></button>
+        <span id="editor-shortcuts"><kbd>Shift + Enter</kbd> 줄바꿈<span class="assist">, Enter로 글 뽑기</span></span>
+        <button id="pull" class="print-button" type="button" title="Enter로 글 뽑기" disabled>글 뽑기<svg aria-hidden="true"><use href="#g-enter"/></svg></button>
       </footer>
     </section>
 

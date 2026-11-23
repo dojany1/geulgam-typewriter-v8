@@ -178,17 +178,13 @@
     const shift = shifted || event.shiftKey;
     if (shifted) { shifted = false; updateLayout(); }
 
-    // Enter breaks the line. Again on the empty last line it ends the writing once
-    // it can be pulled (app.js decides); before that it is a blank line and a nudge.
-    if (code === 'Enter' && !shift && start === end && !editor.value.slice(end).trim()
-        && /\n[^\S\n]*$/.test(editor.value.slice(0, start))) {
-      if (!document.getElementById('pull').disabled) {
-        active = null;
-        document.dispatchEvent(new CustomEvent('gulgam:finish'));
-        if (retainButtonFocus && document.body.dataset.view === 'write') button.focus({ preventScroll: true });
-        return;
-      }
-      document.dispatchEvent(new CustomEvent('gulgam:nudge'));
+    // Enter is 출력: app.js pulls the receipt or says what is still missing.
+    // Shift+Enter and the lever break the line.
+    if (code === 'Enter' && !shift) {
+      active = null;
+      document.dispatchEvent(new CustomEvent('gulgam:finish'));
+      if (retainButtonFocus && document.body.dataset.view === 'write') button.focus({ preventScroll: true });
+      return;
     }
     if (code === 'ArrowLeft' || code === 'ArrowRight') {
       const left = code === 'ArrowLeft';

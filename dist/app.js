@@ -11,6 +11,8 @@
   const draftActions = all('[data-action="copy"], [data-action="download"], [data-action="share-image"], [data-action="share-card"]');
   const printButtons = all('#pull, [data-action="pull"]');
   const finishButtons = all('[data-finish]');
+  // A computer keyboard ends the writing with Enter; a phone keyboard breaks the line (see 완료).
+  const enterEnds = () => !matchMedia('(pointer: coarse)').matches;
   const promptLabels = all('#words [data-prompt-word]');
   const promptHeading = element('words');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -543,7 +545,7 @@
     const count = characterCount();
     element('word-count').textContent = count.toLocaleString('ko-KR') + '자';
     const hint = (isAdjective(promptWords[0]) ? '두 단어를 넣어 써보세요. 형용사는 모양을 바꿔 써도 돼요.' : '두 단어를 넣어 자유롭게 써보세요.')
-      + '\n다 쓰면 엔터를 두 번 누르세요.';
+      + (enterEnds() ? '\n다 쓰면 엔터, 줄바꿈은 Shift+엔터.' : '\n다 쓰면 엔터를 두 번 누르세요.');
     if (editor.placeholder !== hint) editor.placeholder = hint;
     const empty = !editor.value.trim();
     for (const button of draftActions) button.disabled = empty;
@@ -985,10 +987,11 @@
   function recentIMECommit() {
     return recentCommit && performance.now() - recentCommit.at < 45;
   }
-  // 완료: the finish button, or Enter again on the empty last line once every
-  // prompt word is in and the rule is kept. Before that the second Enter is an
-  // ordinary blank line and the finish button shakes to show what is left.
-  // Shift+Enter only breaks the line.
+  // 완료 works like KakaoTalk. With a computer keyboard Enter ends the writing and
+  // Shift+Enter breaks the line. A phone keyboard has no Shift+Enter, so there
+  // Enter breaks the line, and Enter again on the empty last line ends it (as does
+  // the finish button). The typewriter's own keyboard keeps Enter as 출력. Ending
+  // before every prompt word is in and the rule is kept says what is left.
   function onEmptyLastLine(start = editor.selectionStart, end = editor.selectionEnd) {
     return start === end && !editor.value.slice(end).trim() && /\n[^\S\n]*$/.test(editor.value.slice(0, start));
   }
@@ -1001,7 +1004,7 @@
     }
   }
 
-  // An Enter ending may have been meant as a paragraph break; 다시 쓰기 gives it back.
+  // A phone's second Enter may have been meant as a paragraph break; 다시 쓰기 gives it back.
   let enterEnding = null;
   function finishWriting(fromEnter = false) {
     if (element('pull').disabled) {
@@ -1009,15 +1012,20 @@
       showToast('아직 뽑을 수 없어요. ' + promptProgress.textContent);
       return;
     }
-    // An Enter on an empty line ends any composition, even one whose end event a
-    // phone keyboard never sent.
+    // An Enter that ends the writing ends any composition, even one whose end
+    // event a keyboard never sent.
     if (fromEnter) composing = false;
     element('pull').click();
-    enterEnding = fromEnter && document.body.dataset.view === 'receipt' ? editor.value : null;
+    enterEnding = fromEnter && !enterEnds() && document.body.dataset.view === 'receipt' ? editor.value : null;
   }
-  // The typewriter's screen keyboard asks for the same ending.
-  document.addEventListener('gulgam:finish', () => finishWriting(true));
-  document.addEventListener('gulgam:nudge', nudgeFinish);
+  // The typewriter's screen keyboard: Enter is 출력.
+  document.addEventListener('gulgam:finish', () => finishWriting());
+
+  // With a Korean IME the Enter that ends the writing often commits the last
+  // syllable first. Chrome then sends a second, plain Enter keydown; Firefox
+  // sends only compositionend, so the ending waits for that.
+  let enterInComposition = 0;
+  const enterJustComposed = () => enterInComposition && performance.now() - enterInComposition < 300;
 
   if (finishButtons.length) {
     for (const button of finishButtons) {
@@ -1045,11 +1053,20 @@
   editor.addEventListener('pointerdown', startAudio);
   editor.addEventListener('keydown', event => {
     if (event.ctrlKey || event.metaKey || event.altKey || event.defaultPrevented) return;
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' || event.code === 'Enter' || event.code === 'NumpadEnter') {
       // An IME may send compositionend just before the Enter that commits it.
       commitReturn = composing || event.isComposing || event.keyCode === 229 || recentIMECommit();
       shiftReturn = event.shiftKey;
-      if (!commitReturn && !shiftReturn && onEmptyLastLine() && !element('pull').disabled) {
+      if (!shiftReturn && enterEnds()) {
+        if (composing || event.isComposing) {
+          enterInComposition = performance.now();
+        } else {
+          event.preventDefault();
+          enterInComposition = 0;
+          if (!event.repeat) finishWriting(true);
+          return;
+        }
+      } else if (!commitReturn && !shiftReturn && onEmptyLastLine() && !element('pull').disabled) {
         event.preventDefault();
         if (!event.repeat) finishWriting(true);
         return;
@@ -1076,13 +1093,29 @@
     composing = false;
     recentCommit = { text: event.data, at: performance.now() };
     previousComposition = '';
+    if (enterJustComposed()) {
+      setTimeout(() => {
+        if (!enterJustComposed()) return;
+        enterInComposition = 0;
+        finishWriting(true);
+      });
+    }
   });
   editor.addEventListener('beforeinput', event => {
     // The screen keyboard already sounded this stroke and handles its own return key.
     if (consoleReceipt && editor.hasAttribute('data-virtual-edit')) return;
+    const lineBreak = event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak';
+    // On a computer only Shift+Enter breaks the line, whichever event carries the Enter.
+    if (lineBreak && enterEnds() && !shiftReturn) {
+      if (event.cancelable) event.preventDefault();
+      if (!composing && !event.isComposing) {
+        enterInComposition = 0;
+        finishWriting(true);
+      }
+      return;
+    }
     // Soft keyboards often send a line break with no usable keydown.
-    if ((event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak')
-        && !composing && !event.isComposing && !shiftReturn && onEmptyLastLine() && !element('pull').disabled) {
+    if (lineBreak && !composing && !event.isComposing && !shiftReturn && onEmptyLastLine() && !element('pull').disabled) {
       if (event.cancelable) event.preventDefault();
       finishWriting(true);
       return;
@@ -1113,10 +1146,10 @@
     if (event.key === 'Enter') { shiftReturn = false; commitReturn = false; }
   });
   editor.addEventListener('blur', () => { shiftReturn = false; commitReturn = false; });
-  // Whatever events a keyboard sends, the text shows a second Enter: a line break
-  // typed at the end right after an empty line. Ready, it ends the writing (for
-  // keyboards that slipped past keydown and beforeinput); not ready, the blank
-  // line stays and the writer is told what is left.
+  // On a phone, whatever events a keyboard sends, the text shows a second Enter:
+  // a line break typed at the end right after an empty line. Ready, it ends the
+  // writing (for keyboards that slipped past keydown and beforeinput); not ready,
+  // the blank line stays and the writer is told what is left.
   let previousText = editor.value;
   editor.addEventListener('input', () => {
     const before = previousText;
@@ -1124,14 +1157,17 @@
     updateWritingTime();
     const wasReady = !element('pull').disabled;
     renderEditor();
-    const secondEnter = !shiftReturn && editor.value === before + '\n' && /\n[^\S\n]*\n$/.test(editor.value)
+    const secondEnter = !enterEnds() && !shiftReturn && !editor.hasAttribute('data-virtual-edit')
+      && editor.value === before + '\n' && /\n[^\S\n]*\n$/.test(editor.value)
       && editor.selectionStart === editor.value.length && document.body.dataset.view === 'write';
     if (secondEnter) {
       saveDraft();
       finishWriting(true);
       return;
     }
-    if (!wasReady && !element('pull').disabled) showToast('이제 글을 뽑을 수 있어요. 다 쓰면 엔터 두 번!');
+    if (!wasReady && !element('pull').disabled) {
+      showToast('이제 글을 뽑을 수 있어요. 다 쓰면 ' + (enterEnds() ? '엔터!' : '엔터 두 번!'));
+    }
     saveDraft();
   });
 
