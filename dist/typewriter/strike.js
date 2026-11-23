@@ -178,11 +178,12 @@
     const shift = shifted || event.shiftKey;
     if (shifted) { shifted = false; updateLayout(); }
 
-    if (code === 'Enter' && !shift) {
+    // Enter breaks the line; again on the empty last line, app.js ends the writing.
+    if (code === 'Enter' && !shift && start === end && !editor.value.slice(end).trim()
+        && /\n[^\S\n]*$/.test(editor.value.slice(0, start))) {
       active = null;
-      const pull = document.getElementById('pull');
-      if (!pull.disabled) pull.click();
-      else if (retainButtonFocus) button.focus({ preventScroll: true });
+      document.dispatchEvent(new CustomEvent('gulgam:finish'));
+      if (retainButtonFocus && document.body.dataset.view === 'write') button.focus({ preventScroll: true });
       return;
     }
     if (code === 'ArrowLeft' || code === 'ArrowRight') {

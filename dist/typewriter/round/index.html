@@ -27,8 +27,8 @@
   <link rel="stylesheet" href="hood.css">
   <link rel="stylesheet" href="../modes.css?v=6">
   <script defer src="../../words.js?v=6"></script>
-  <script defer src="../../app.js?v=11"></script>
-  <script defer src="strike.js"></script>
+  <script defer src="../../app.js?v=12"></script>
+  <script defer src="strike.js?v=1"></script>
   <script defer src="typesetter.js"></script>
 </head>
 <body data-edition="typewriter" data-key-shape="round" data-view="write">
@@ -74,7 +74,7 @@
               <button type="button" data-action="share-prompt" aria-label="같은 글감 보내기" title="같은 글감 보내기"><svg aria-hidden="true"><use href="#share-icon"/></svg><span>글감 보내기</span></button>
             </div>
           </header>
-          <textarea id="editor" rows="3" spellcheck="false" aria-label="나의 글" aria-describedby="words prompt-progress editor-shortcuts" enterkeyhint="send" placeholder="두 단어를 넣어 자유롭게 써보세요."></textarea>
+          <textarea id="editor" rows="3" spellcheck="false" aria-label="나의 글" aria-describedby="words prompt-progress editor-shortcuts" placeholder="두 단어를 넣어 자유롭게 써보세요."></textarea>
           <span class="write-guide" data-write-guide aria-hidden="true"></span>
           <span class="paper-caret" data-paper-caret aria-hidden="true"></span>
         </div>
@@ -120,7 +120,7 @@
               <button type="button" data-code="KeyI" aria-label="I"><span data-key-primary>I</span><span data-key-secondary>I</span></button>
               <button type="button" data-code="KeyO" aria-label="O"><span data-key-primary>O</span><span data-key-secondary>O</span></button>
               <button type="button" data-code="KeyP" aria-label="P"><span data-key-primary>P</span><span data-key-secondary>P</span></button>
-              <button type="button" class="function-key" data-code="Enter" aria-label="Enter · 글 뽑기"><span aria-hidden="true" class="key-symbol">↵</span><span class="key-name">출력</span></button>
+              <button type="button" class="function-key" data-code="Enter" aria-label="Enter · 줄바꿈, 빈 줄에서 한 번 더 누르면 글 뽑기"><span aria-hidden="true" class="key-symbol">↵</span><span class="key-name">Enter</span></button>
             </div>
             <div class="letter-row">
               <button type="button" data-code="KeyA" aria-label="A"><span data-key-primary>A</span><span data-key-secondary>A</span></button>
@@ -171,8 +171,8 @@
           </div>
         </div>
         <div class="type-position"><span><b data-type-line>01</b>행</span><span><b data-type-column>01</b>칸</span></div>
-        <span id="editor-shortcuts"><kbd>Shift + Enter</kbd> 줄바꿈<span class="assist">, Enter로 글 뽑기</span></span>
-        <button id="pull" class="print-button" type="button" title="Enter로 글 뽑기" disabled>글 뽑기<svg aria-hidden="true"><use href="#g-enter"/></svg></button>
+        <span id="editor-shortcuts"><kbd>Enter</kbd> 두 번으로 글 뽑기</span>
+        <button id="pull" class="print-button" type="button" title="Enter 두 번으로 글 뽑기" disabled>글 뽑기<svg aria-hidden="true"><use href="#g-enter"/></svg></button>
       </footer>
     </section>
 

@@ -971,17 +971,35 @@
   function recentIMECommit() {
     return recentCommit && performance.now() - recentCommit.at < 45;
   }
+  // 완료: Enter breaks the line, and Enter again on the empty last line ends the
+  // writing. With every prompt word in and the rule kept it pulls the receipt;
+  // otherwise it says what is still missing. Shift+Enter only breaks the line.
+  function onEmptyLastLine(start = editor.selectionStart, end = editor.selectionEnd) {
+    return start === end && !editor.value.slice(end).trim() && /\n[^\S\n]*$/.test(editor.value.slice(0, start));
+  }
+
+  function finishWriting() {
+    if (element('pull').disabled) {
+      showToast('아직 뽑을 수 없어요. ' + promptProgress.textContent);
+      return;
+    }
+    const text = editor.value.replace(/\s+$/, '');
+    if (text !== editor.value) setEditorText(text);
+    element('pull').click();
+  }
+  // The typewriter's screen keyboard asks for the same ending.
+  document.addEventListener('gulgam:finish', finishWriting);
+
   editor.addEventListener('pointerdown', startAudio);
   editor.addEventListener('keydown', event => {
     if (event.ctrlKey || event.metaKey || event.altKey || event.defaultPrevented) return;
-    if (consoleReceipt && event.key === 'Enter') {
+    if (event.key === 'Enter') {
       // An IME may send compositionend just before the Enter that commits it.
       commitReturn = composing || event.isComposing || event.keyCode === 229 || recentIMECommit();
       shiftReturn = event.shiftKey;
-      if (commitReturn) return;
-      if (!shiftReturn) {
+      if (!commitReturn && !shiftReturn && onEmptyLastLine()) {
         event.preventDefault();
-        if (!event.repeat && !element('pull').disabled) element('pull').click();
+        if (!event.repeat) finishWriting();
         return;
       }
     }
@@ -1010,18 +1028,12 @@
   editor.addEventListener('beforeinput', event => {
     // The screen keyboard already sounded this stroke and handles its own return key.
     if (consoleReceipt && editor.hasAttribute('data-virtual-edit')) return;
-    if (consoleReceipt && (event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak')) {
-      // Soft keyboards sometimes emit a line break without a keydown.
-      if (composing || event.isComposing) return;
-      if (commitReturn || recentIMECommit()) {
-        if (event.cancelable) event.preventDefault();
-        return;
-      }
-      if (!shiftReturn && event.cancelable) {
-        event.preventDefault();
-        if (!element('pull').disabled) element('pull').click();
-        return;
-      }
+    // Soft keyboards often send a line break with no usable keydown.
+    if ((event.inputType === 'insertParagraph' || event.inputType === 'insertLineBreak')
+        && !composing && !event.isComposing && !shiftReturn && onEmptyLastLine()) {
+      if (event.cancelable) event.preventDefault();
+      finishWriting();
+      return;
     }
     // A mobile IME may only send beforeinput. Hardware already sounds at
     // keydown; ignoring its follow-up input also avoids double-sounding Hangul.
@@ -1051,7 +1063,9 @@
   editor.addEventListener('blur', () => { shiftReturn = false; commitReturn = false; });
   editor.addEventListener('input', () => {
     updateWritingTime();
+    const wasReady = !element('pull').disabled;
     renderEditor();
+    if (!wasReady && !element('pull').disabled) showToast('이제 글을 뽑을 수 있어요. 다 쓰면 Enter를 두 번 누르세요.');
     saveDraft();
   });
 
