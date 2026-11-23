@@ -2022,4 +2022,11 @@
   if (desktopWriter) {
     editor.focus({ preventScroll: true });
   }
+
+  // ?keys shows what the keyboard sends, for phones whose Enter misbehaves.
+  if (new URLSearchParams(location.search).has('keys')) {
+    const script = document.createElement('script');
+    script.src = '/debug-keys.js?v=1';
+    document.head.append(script);
+  }
 })();

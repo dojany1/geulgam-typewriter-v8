@@ -46,6 +46,7 @@
 - 배포: Cloudflare Pages 프로젝트 `gulgam-web`이 `dokhustudio/geulgam-typewriter-v8`의 main에 푸시될 때마다 빌드 없이 `dist`를 올린다. 주소는 https://gulgam.dokhustudio.com 이고 예비 주소는 `gulgam-web.pages.dev`다. 브라우저 저장소는 주소마다 따로라, 주소를 옮기면 사용자의 초안과 뽑은 글이 따라오지 않는다.
 - 자동 테스트는 없다. 변경 뒤에는 세 화면(`/`, `/typewriter/`, `/typewriter/round/`)을 직접 열어 `docs/acceptance.md`에서 바뀐 기능의 표를 확인하고, 폭 375px에서도 깨지지 않는지 본다. 콘솔 오류가 없어야 끝이다. 표를 고쳤으면 확인한 날짜도 고친다.
 - `app.js` 초기화 도중(파일 끝의 첫 그리기 전)에는 `saveDraft`나 에디터에 글을 쓰는 함수를 부르지 않는다. 아직 선언되지 않은 상수를 건드려 세 화면 전체가 멈춘다. 그런 처리는 파일 끝 초기화 구간에 둔다.
+- 폰에서 엔터·한글 입력이 이상하면 주소 끝에 `?keys`를 붙여 연다. `dist/debug-keys.js`가 키보드가 보낸 신호(keydown·beforeinput·input·조합)와 글 뽑기 상태를 화면 위에 띄운다.
 - `dist/words.js`를 고쳤으면 저장소 루트에서 `node tools/check-words.js`가 통과해야 한다. 형용사 형태를 더할 때 걸리면 형태를 길게 쓰거나 그 형용사를 뺀다.
 - 링크 미리보기 이미지를 바꿀 때는 저장소 루트를 정적 서버로 띄우고 `/tools/og-image.html`을 열어 내려받은 `og.png`로 `dist/assets/og.png`를 덮어쓴다.
 - 커밋 제목은 영어 명령형 한 문장으로 기존 로그와 맞춘다. 예: `Require both noun prompts before printing a writing receipt`.
