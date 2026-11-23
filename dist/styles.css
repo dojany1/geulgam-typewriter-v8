@@ -69,10 +69,9 @@ dialog::backdrop { background: rgb(0 0 0 / .23); }
 .setting-row button, .tools-list button { font-size: 12px; font-weight: 600; min-height: 32px; padding: 0 6px; }
 .setting-row label small { display: block; color: var(--muted); font-size: 10px; font-weight: 500; }
 .setting-row select { max-width: 55%; min-height: 32px; padding: 0 6px; font: inherit; font-size: 12px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 2px; }
-.mission-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -8px; padding-bottom: 10px; color: var(--muted); font-size: 12px; }
-.mission-value button { font-size: 12px; font-weight: 600; min-height: 28px; text-decoration: underline; text-underline-offset: 3px; }
-.mission-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-.pieces-note, .pieces-empty { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.prompt-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -8px; padding-bottom: 10px; color: var(--muted); font-size: 12px; }
+.prompt-value button { font-size: 12px; font-weight: 600; min-height: 28px; text-decoration: underline; text-underline-offset: 3px; }
+.prompt-note, .pieces-note, .pieces-empty { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .pieces-list { list-style: none; margin: 8px 0 0; padding: 0; max-height: min(52vh, 420px); overflow-y: auto; scrollbar-width: thin; }
 .piece-row { display: flex; align-items: flex-start; gap: 6px; border-top: 1px solid var(--line); }
 .piece-open { flex: 1; min-width: 0; display: block; padding: 10px 0; text-align: left; }
@@ -89,7 +88,7 @@ dialog::backdrop { background: rgb(0 0 0 / .23); }
 .pieces-footer button:not(:disabled):hover { text-decoration: underline; text-underline-offset: 3px; }
 .receipt-kept { color: var(--muted); font-size: 11px; }
 .result-tools .receipt-kept { padding-top: 1px; }
-.attribution .mission-line { margin-left: .4em; font-size: 12px; }
+.attribution .prompt-line { margin-left: .4em; font-size: 12px; }
 .setting-buttons, .tools-list { display: flex; align-items: center; gap: 8px; }
 .setting-row button:hover { text-decoration: underline; }
 .tools-list { padding-top: 10px; justify-content: space-between; }

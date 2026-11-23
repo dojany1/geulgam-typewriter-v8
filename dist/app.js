@@ -22,14 +22,14 @@
   const themeKey = 'gulgam.theme.v1';
   const recentWords = { nouns: [], adjectives: [] };
   const carriage = document.querySelector('[data-carriage]');
-  const missionLines = all('[data-mission-line]');
+  const promptLines = all('[data-prompt-line]');
   const ruleSentences = all('[data-rule-sentence]');
-  const missionDialog = element('mission-dialog');
+  const promptDialog = element('prompt-dialog');
   const piecesDialog = element('pieces-dialog');
   const piecesKey = 'gulgam.pieces.v1';
   const pieceLimit = 200;
   let toastTimer;
-  let drawing = null;
+  let revealing = null;
   let timerWasOver = false;
   let composing = false;
 
@@ -110,17 +110,42 @@
     && (gulgamWords.nouns.includes(words[0]) || isAdjective(words[0]))
     && gulgamWords.nouns.includes(words[1]) && !clash(words[0], words[1]);
 
+  // A given sentence that already holds a prompt word would write it for the writer.
+  const holdsWord = (sentence, word) => formsOf(word).some(form => sentence.includes(form));
+
   // A rule is judged here and can hold the receipt back. Conditions (viewpoint,
   // mood, form) are only printed on the slip; whoever reads it judges those.
+  // Each kind keeps in one place its option name, values, label, when the text
+  // breaks it, the hint while broken, and which prompt word it cannot sit beside.
   const ruleKinds = {
-    length: { values: gulgamWords.lengths, label: value => value + '자 이내' },
-    timer: { values: gulgamWords.minutes, label: value => value + '분 안에' },
-    ban: { values: gulgamWords.banned, label: value => '‘' + value + '’ 금지' },
-    first: { values: gulgamWords.openings, label: value => '첫 문장 ‘' + value + '’' },
-    last: { values: gulgamWords.endings, label: value => '끝 문장 ‘' + value + '’' }
+    length: {
+      name: '글자 수 제한', values: gulgamWords.lengths, label: value => value + '자 이내',
+      broken: value => characterCount() > value,
+      hint: value => value + '자를 넘었어요. 지금 ' + characterCount() + '자'
+    },
+    timer: { name: '시간 제한', values: gulgamWords.minutes, label: value => value + '분 안에' },
+    ban: {
+      name: '금지 표현', values: gulgamWords.banned, label: value => '‘' + value + '’ 금지', text: true,
+      broken: value => editor.value.normalize('NFC').includes(value),
+      hint: value => '‘' + value + '’ 없이 써야 뽑을 수 있어요.',
+      // A banned word inside a prompt word makes the prompt impossible.
+      clashes: (value, word) => clash(word, value)
+    },
+    first: {
+      name: '첫 문장 지정', values: gulgamWords.openings, label: value => '첫 문장 ‘' + value + '’', text: true, sentence: true,
+      broken: value => !sentenceCore(editor.value).startsWith(sentenceCore(value)),
+      hint: value => '‘' + value + '’로 시작해야 뽑을 수 있어요.',
+      clashes: holdsWord
+    },
+    last: {
+      name: '끝 문장 지정', values: gulgamWords.endings, label: value => '끝 문장 ‘' + value + '’', text: true, sentence: true,
+      broken: value => !sentenceCore(editor.value).endsWith(sentenceCore(value)),
+      hint: value => '‘' + value + '’로 끝내야 뽑을 수 있어요.',
+      clashes: holdsWord
+    }
   };
-  const sentenceRule = type => type === 'first' || type === 'last';
-  const textRule = type => type === 'ban' || sentenceRule(type);
+  const sentenceRule = type => Boolean(ruleKinds[type]?.sentence);
+  const textRule = type => Boolean(ruleKinds[type]?.text);
   const conditionKeys = Object.keys(gulgamWords.conditions);
 
   function validRule(source) {
@@ -137,13 +162,16 @@
     return conditions;
   }
 
-  // A banned word inside a prompt word makes the prompt impossible, and a given
-  // sentence that already holds a prompt word would write it for the writer.
+  // A saved draft or piece carries a whole prompt: its words, rule and conditions.
+  function adoptPrompt(record) {
+    promptWords = readPrompt(record);
+    rule = validRule(record.rule);
+    conditions = validConditions(record.conditions);
+  }
+
   function ruleConflicts(candidate) {
-    if (!candidate) return false;
-    if (candidate.type === 'ban') return promptWords.some(word => clash(word, candidate.value));
-    if (sentenceRule(candidate.type)) return promptWords.some(word => formsOf(word).some(form => candidate.value.includes(form)));
-    return false;
+    const clashes = candidate && ruleKinds[candidate.type].clashes;
+    return Boolean(clashes) && promptWords.some(word => clashes(candidate.value, word));
   }
 
   // A rule that clashes with newly drawn words is drawn again, and a first
@@ -186,7 +214,7 @@
     };
   }
 
-  function missionUrl() {
+  function promptUrl() {
     const parts = ['w=' + promptWords.join(',')];
     // Encoded so a sentence's spaces do not cut the link short in a messenger.
     if (rule) parts.push('r=' + rule.type + ':' + encodeURIComponent(rule.value));
@@ -287,14 +315,14 @@
     return promptWords.join(' · ');
   }
 
-  function missionSignature(nouns, savedRule, savedConditions) {
+  function promptSignature(nouns, savedRule, savedConditions) {
     return JSON.stringify([nouns, savedRule, conditionKeys.map(key => savedConditions[key] || '')]);
   }
 
   function sameSavedPrompt(record) {
     return (record.version === 2 || record.version === 3) && Array.isArray(record.nounIds) && record.nounIds.length === 2
-      && missionSignature(record.nounIds, validRule(record.rule), validConditions(record.conditions))
-        === missionSignature(promptWords, rule, conditions);
+      && promptSignature(record.nounIds, validRule(record.rule), validConditions(record.conditions))
+        === promptSignature(promptWords, rule, conditions);
   }
 
   const saveMessages = {
@@ -356,12 +384,7 @@
   const characterCount = () => Array.from(editor.value).length;
 
   function ruleBroken() {
-    if (!rule) return false;
-    if (rule.type === 'length') return characterCount() > rule.value;
-    if (rule.type === 'ban') return editor.value.normalize('NFC').includes(rule.value);
-    if (rule.type === 'first') return !sentenceCore(editor.value).startsWith(sentenceCore(rule.value));
-    if (rule.type === 'last') return !sentenceCore(editor.value).endsWith(sentenceCore(rule.value));
-    return false;
+    return Boolean(rule && ruleKinds[rule.type].broken?.(rule.value));
   }
 
   // Given sentences match regardless of spacing and the closing punctuation.
@@ -422,7 +445,7 @@
   const conditionList = source => conditionKeys.map(key => source[key]).filter(Boolean);
   const conditionLabels = () => conditionList(conditions);
 
-  function renderMission() {
+  function renderPromptLine() {
     const timer = timerState();
     const chips = [];
     if (rule) {
@@ -443,7 +466,7 @@
       if (line.dataset.used !== sentenceChip.used) line.dataset.used = sentenceChip.used;
     }
     const signature = JSON.stringify(chips);
-    for (const line of missionLines) {
+    for (const line of promptLines) {
       line.hidden = chips.length === 0;
       if (line.dataset.signature === signature) continue;
       line.dataset.signature = signature;
@@ -470,21 +493,18 @@
     for (const button of printButtons) button.disabled = missing.length > 0 || broken;
     promptLabels.forEach((label, index) => {
       const word = promptWords[index];
-      if (!drawing && label.textContent !== word) label.textContent = word;
+      if (!revealing && label.textContent !== word) label.textContent = word;
       const used = String(!missing.includes(word));
       if (label.dataset.used !== used) label.dataset.used = used;
     });
     let progress;
     if (missing.length) progress = '남은 글감 ' + missing.join(', ');
-    else if (broken && rule.type === 'length') progress = rule.value + '자를 넘었어요. 지금 ' + count + '자';
-    else if (broken && rule.type === 'first') progress = '‘' + rule.value + '’로 시작해야 뽑을 수 있어요.';
-    else if (broken && rule.type === 'last') progress = '‘' + rule.value + '’로 끝내야 뽑을 수 있어요.';
-    else if (broken) progress = '‘' + rule.value + '’ 없이 써야 뽑을 수 있어요.';
+    else if (broken) progress = ruleKinds[rule.type].hint(rule.value);
     else progress = '두 단어를 모두 썼어요. 글을 뽑을 수 있어요.';
     if (timerState()?.over) progress = '시간이 다 됐어요. ' + progress;
     if (promptProgress.textContent !== progress) promptProgress.textContent = progress;
     for (const label of lineCounters) label.textContent = editor.value ? String(editor.value.split('\n').length) : '0';
-    renderMission();
+    renderPromptLine();
     updateCarriage();
   }
 
@@ -501,15 +521,15 @@
     editor.addEventListener('click', updateCarriage);
   }
 
-  // Drawing a prompt flips each word through candidates of the same length,
-  // like a slot reel, and lands it with a key strike: one word after another,
-  // within `duration`. The prompt is already decided and saved; only the labels
-  // are borrowed. A tap or key press lands everything at once.
-  function landDraw() {
-    if (!drawing) return;
-    clearTimeout(drawing.timer);
-    drawing = null;
-    delete promptHeading.dataset.drawing;
+  // Revealing a drawn prompt flips each word through candidates of the same
+  // length, like a slot reel, and lands it with a key strike: one word after
+  // another, within `duration`. The prompt is already decided and saved; only
+  // the labels are borrowed. A tap or key press lands everything at once.
+  function landReveal() {
+    if (!revealing) return;
+    clearTimeout(revealing.timer);
+    revealing = null;
+    delete promptHeading.dataset.revealing;
     promptHeading.removeAttribute('aria-busy');
     for (const label of promptLabels) {
       delete label.dataset.landed;
@@ -518,8 +538,8 @@
     renderEditor();
   }
 
-  function drawPrompt(duration) {
-    landDraw();
+  function revealPrompt(duration) {
+    landReveal();
     if (!promptHeading || promptLabels.length !== promptWords.length || reducedMotion.matches || document.hidden) return;
     const pools = promptWords.map(word => {
       const list = isAdjective(word) ? adjectiveIds : gulgamWords.nouns;
@@ -533,11 +553,11 @@
     const landAt = promptWords.map((_, index) => duration * (index + 1) / promptWords.length);
     const start = performance.now();
     const run = { timer: 0 };
-    drawing = run;
-    promptHeading.dataset.drawing = '';
+    revealing = run;
+    promptHeading.dataset.revealing = '';
     promptHeading.setAttribute('aria-busy', 'true');
     const step = () => {
-      if (drawing !== run) return;
+      if (revealing !== run) return;
       const elapsed = performance.now() - start;
       promptLabels.forEach((label, index) => {
         if ('landed' in label.dataset) return;
@@ -553,7 +573,7 @@
         label.textContent = next;
       });
       if (promptLabels.every(label => 'landed' in label.dataset)) {
-        landDraw();
+        landReveal();
         return;
       }
       // Flip fast at first and slow toward the last landing, without overshooting the next one.
@@ -563,10 +583,10 @@
     step();
   }
 
-  for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, landDraw, true);
+  for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, landReveal, true);
   // Mobile keyboards may insert text without a usable keydown.
-  editor.addEventListener('beforeinput', landDraw);
-  document.addEventListener('visibilitychange', landDraw);
+  editor.addEventListener('beforeinput', landReveal);
+  document.addEventListener('visibilitychange', landReveal);
 
   function restoreCurrentDraft() {
     // A cached page can miss storage events. Read the same record as a fresh
@@ -581,11 +601,7 @@
     lastEditTime = Math.max(lastEditTime, modifiedTime(latest));
     writing = readWritingTime(latest);
     recoverableText = latest.text;
-    if (!sameSavedPrompt(latest)) {
-      promptWords = readPrompt(latest);
-      rule = validRule(latest.rule);
-      conditions = validConditions(latest.conditions);
-    }
+    if (!sameSavedPrompt(latest)) adoptPrompt(latest);
     // A limit that ran out elsewhere is not this tab's to pull.
     timerWasOver = Boolean(timerState()?.over);
     if (editor.value !== latest.text) editor.value = latest.text;
@@ -991,7 +1007,7 @@
       setView('write');
       editor.focus({ preventScroll: true });
     }
-    drawPrompt(600);
+    revealPrompt(600);
   });
 
   // After a pointer-operated adjustment desktop writers can keep typing.
@@ -1120,8 +1136,8 @@
   // A phone gets the system share sheet; a desktop gets the link or the file.
   const touchSharing = () => matchMedia('(pointer: coarse)').matches;
 
-  async function shareMission(trigger) {
-    const url = missionUrl();
+  async function sharePrompt(trigger) {
+    const url = promptUrl();
     const text = wordPair() + (rule ? ' · ' + ruleLabel() : '') + ' — 이 글감으로 글 써볼래?';
     if (navigator.share && touchSharing()) {
       try {
@@ -1334,7 +1350,7 @@
     const file = new File([blob], name, { type: 'image/png' });
     if (touchSharing() && navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: 'GULGAM 글 영수증', text: wordPair() + ' · 글감에서 쓴 글 ' + missionUrl() });
+        await navigator.share({ files: [file], title: 'GULGAM 글 영수증', text: wordPair() + ' · 글감에서 쓴 글 ' + promptUrl() });
         return;
       } catch (error) {
         if (error?.name === 'AbortError') return;
@@ -1403,7 +1419,7 @@
     return glyphs.length > 48 ? glyphs.slice(0, 48).join('') + '…' : line;
   }
 
-  function pieceTags(piece) {
+  function pieceLabels(piece) {
     return [labelFor(validRule(piece.rule)), ...conditionList(validConditions(piece.conditions))].filter(Boolean);
   }
 
@@ -1412,9 +1428,7 @@
     const current = editor.value;
     const unsaved = current.trim() && current !== piece.text && !readPieces().some(saved => saved.text === current);
     if (unsaved && !window.confirm('쓰던 글을 이 글로 바꿀까요? 쓰던 글은 사라져요.')) return;
-    promptWords = readPrompt(piece);
-    rule = validRule(piece.rule);
-    conditions = validConditions(piece.conditions);
+    adoptPrompt(piece);
     editor.value = piece.text;
     writing = { elapsedMs: Number.isFinite(piece.elapsedMs) ? piece.elapsedMs : 0, since: null, resumed: piece.resumed === true };
     timerWasOver = Boolean(timerState()?.over);
@@ -1433,7 +1447,7 @@
     const divider = '─'.repeat(28);
     const entries = list.map(piece => {
       const head = pieceDate(piece) + ' · ' + piece.nounIds.join(' · ');
-      const tags = pieceTags(piece).join(' · ');
+      const tags = pieceLabels(piece).join(' · ');
       const timing = '걸린 시간 ' + durationText(piece.elapsedMs || 0) + ' · ' + Array.from(piece.text).length + '자';
       return [head, ...(tags ? [tags] : []), timing, '', piece.text].join('\n');
     });
@@ -1460,7 +1474,7 @@
         open.dataset.openPiece = piece.id;
         const head = node('span', 'piece-head');
         head.append(node('strong', '', piece.nounIds.join(' · ')), node('span', 'piece-date', pieceDate(piece)));
-        const meta = [Array.from(piece.text).length.toLocaleString('ko-KR') + '자', ...pieceTags(piece)].join(' · ');
+        const meta = [Array.from(piece.text).length.toLocaleString('ko-KR') + '자', ...pieceLabels(piece)].join(' · ');
         open.append(head, node('span', 'piece-excerpt', pieceExcerpt(piece.text)), node('span', 'piece-meta', meta));
         const remove = node('button', 'piece-delete', '지우기');
         remove.type = 'button';
@@ -1541,7 +1555,7 @@
     }
   }
 
-  for (const name of ['settings', 'tools', 'mission', 'pieces']) {
+  for (const name of ['settings', 'tools', 'prompt', 'pieces']) {
     const dialog = element(name + '-dialog');
     if (!dialog) continue;
     for (const button of all('[data-open-' + name + ']')) {
@@ -1568,7 +1582,7 @@
       button.closest('dialog')?.close();
       if (action === 'copy') copyText(button);
       else if (action === 'download') downloadText();
-      else if (action === 'share-mission') shareMission(button);
+      else if (action === 'share-prompt') sharePrompt(button);
       else if (action === 'share-image') shareReceiptImage(button);
       else if (['reroll', 'pull', 'back'].includes(action) && button !== element(action)) element(action).click();
     });
@@ -1605,60 +1619,62 @@
 
   // A limit that already ran out before this visit waits for a manual pull.
   timerWasOver = Boolean(timerState()?.over);
-  if (missionDialog) {
-    const kindSelect = missionDialog.querySelector('[data-mission-kind]');
-    const ruleSelect = missionDialog.querySelector('[data-mission-rule]');
-    const ruleValue = missionDialog.querySelector('[data-mission-value]');
-    const ruleText = missionDialog.querySelector('[data-rule-value]');
-    const redraw = missionDialog.querySelector('[data-redraw-rule]');
-    const conditionSelects = all('[data-mission-condition]');
+  if (promptDialog) {
+    const kindSelect = promptDialog.querySelector('[data-prompt-kind]');
+    const ruleSelect = promptDialog.querySelector('[data-prompt-rule]');
+    const ruleValue = promptDialog.querySelector('[data-prompt-value]');
+    const ruleText = promptDialog.querySelector('[data-rule-value]');
+    const redraw = promptDialog.querySelector('[data-redraw-rule]');
+    const conditionSelects = all('[data-prompt-condition]');
+    // Both lists come from the code, so a new rule kind or condition value needs no HTML edit.
+    for (const [type, kind] of Object.entries(ruleKinds)) ruleSelect.append(new Option(kind.name, type));
     for (const select of conditionSelects) {
-      for (const value of gulgamWords.conditions[select.dataset.missionCondition] || []) {
+      for (const value of gulgamWords.conditions[select.dataset.promptCondition] || []) {
         select.append(new Option(value, value));
       }
     }
-    const renderMissionDialog = () => {
+    const renderPromptDialog = () => {
       if (kindSelect) kindSelect.value = isAdjective(promptWords[0]) ? 'adjective' : 'noun';
       ruleSelect.value = rule ? rule.type : '';
       ruleValue.hidden = !rule;
       ruleText.textContent = ruleLabel();
-      for (const select of conditionSelects) select.value = conditions[select.dataset.missionCondition] || '';
+      for (const select of conditionSelects) select.value = conditions[select.dataset.promptCondition] || '';
     };
-    const commitMission = () => {
+    const commitPrompt = () => {
       renderEditor();
       saveDraft();
-      renderMissionDialog();
+      renderPromptDialog();
     };
-    missionDialog.addEventListener('gulgam:open', renderMissionDialog);
+    promptDialog.addEventListener('gulgam:open', renderPromptDialog);
     // Switching the kind redraws only the first word; the noun and the text stay.
     kindSelect?.addEventListener('change', () => {
       const adjective = kindSelect.value === 'adjective';
       if (adjective === isAdjective(promptWords[0])) return;
       promptWords = [adjective ? pickAdjective(promptWords[1]) : pickNoun(promptWords[1]), promptWords[1]];
       redrawClashingRule();
-      commitMission();
+      commitPrompt();
     });
     ruleSelect.addEventListener('change', () => {
       const previous = rule;
       rule = drawRule(ruleSelect.value);
       if (rule?.type === 'timer') restartClock();
       syncOpening(previous);
-      commitMission();
+      commitPrompt();
     });
     redraw.addEventListener('click', () => {
       const previous = rule;
       if (rule) rule = drawRule(rule.type, rule.value);
       if (rule?.type === 'timer') restartClock();
       syncOpening(previous);
-      commitMission();
+      commitPrompt();
     });
     for (const select of conditionSelects) {
       select.addEventListener('change', () => {
         const next = { ...conditions };
-        if (select.value) next[select.dataset.missionCondition] = select.value;
-        else delete next[select.dataset.missionCondition];
+        if (select.value) next[select.dataset.promptCondition] = select.value;
+        else delete next[select.dataset.promptCondition];
         conditions = validConditions(next);
-        commitMission();
+        commitPrompt();
       });
     }
   }
@@ -1690,7 +1706,7 @@
   else saveDraft();
   // A received prompt shows at once; a first visit draws its prompt.
   if (linked) showToast('받은 글감으로 시작해요. ' + wordPair());
-  else if (!initial.record) drawPrompt(1000);
+  else if (!initial.record) revealPrompt(1000);
   const desktopWriter = consoleReceipt
     ? navigator.maxTouchPoints === 0 || matchMedia('(hover: hover) and (pointer: fine)').matches
     : matchMedia('(min-width: 651px) and (pointer: fine)').matches;

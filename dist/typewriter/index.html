@@ -20,12 +20,12 @@
   <meta name="twitter:description" content="무작위로 뽑힌 두 단어를 모두 넣어 타자기로 짧은 글을 쓰고, 영수증으로 뽑아 친구에게 같은 글감을 보내요.">
   <meta name="twitter:image" content="/assets/og.png">
   <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../common.css?v=6">
-  <link rel="stylesheet" href="../styles.css?v=4">
-  <link rel="stylesheet" href="edition.css?v=3">
-  <link rel="stylesheet" href="modes.css?v=5">
+  <link rel="stylesheet" href="../common.css?v=7">
+  <link rel="stylesheet" href="../styles.css?v=5">
+  <link rel="stylesheet" href="edition.css?v=4">
+  <link rel="stylesheet" href="modes.css?v=6">
   <script defer src="../words.js?v=6"></script>
-  <script defer src="../app.js?v=9"></script>
+  <script defer src="../app.js?v=10"></script>
   <script defer src="strike.js"></script>
   <script defer src="typesetter.js"></script>
 </head>
@@ -58,10 +58,10 @@
   <main class="column workspace console">
     <section id="write-view" data-typesetter aria-label="타자기로 글쓰기">
       <header class="context-bar">
-        <div class="prompt"><span class="prompt-label">오늘의 글감</span><span class="mission-line" data-mission-line hidden></span></div>
+        <div class="prompt"><span class="prompt-label">오늘의 글감</span><span class="prompt-line" data-prompt-line hidden></span></div>
         <div class="prompt-actions">
-          <button type="button" data-open-mission aria-label="글감 조건" title="글감 조건"><svg aria-hidden="true"><use href="#rule-icon"/></svg><span>조건</span></button>
-          <button type="button" data-action="share-mission" aria-label="같은 글감 보내기" title="같은 글감 보내기"><svg aria-hidden="true"><use href="#share-icon"/></svg><span>글감 보내기</span></button>
+          <button type="button" data-open-prompt aria-label="글감 설정" title="글감 설정"><svg aria-hidden="true"><use href="#rule-icon"/></svg><span>글감 설정</span></button>
+          <button type="button" data-action="share-prompt" aria-label="같은 글감 보내기" title="같은 글감 보내기"><svg aria-hidden="true"><use href="#share-icon"/></svg><span>글감 보내기</span></button>
           <button id="reroll" type="button" aria-label="글감 다시 뽑기" title="글감 다시 뽑기"><svg aria-hidden="true"><use href="#g-roll"/></svg><span>다른 글감</span></button>
         </div>
       </header>
@@ -160,7 +160,7 @@
       <div class="output-controls">
         <button id="back" type="button"><svg aria-hidden="true"><use href="#g-back"/></svg>다시 쓰기</button>
         <button type="button" data-action="share-image">영수증 이미지</button>
-        <button type="button" data-action="share-mission">글감 보내기</button>
+        <button type="button" data-action="share-prompt">글감 보내기</button>
         <button id="copy" type="button">글 복사</button>
         <button id="download" type="button">TXT 저장</button>
         <button id="skip-print" type="button" hidden>바로 보기</button>
@@ -168,15 +168,15 @@
       <textarea id="copy-fallback" readonly hidden aria-label="복사용 본문"></textarea>
     </section>
   </main>
-  <dialog id="mission-dialog" aria-labelledby="mission-title">
-    <div class="dialog-heading"><h2 id="mission-title">글감 조건</h2><button data-close-dialog aria-label="조건 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>
-    <div class="setting-row"><label for="mission-kind">글감 <small>형용사는 모양을 바꿔 써도 돼요</small></label><select id="mission-kind" data-mission-kind><option value="noun">명사 + 명사</option><option value="adjective">형용사 + 명사</option></select></div>
-    <div class="setting-row"><label for="mission-rule">제약 <small>앱이 확인하고 글 뽑기를 막아요</small></label><select id="mission-rule" data-mission-rule><option value="">없음</option><option value="length">글자 수 제한</option><option value="timer">시간 제한</option><option value="ban">금지 표현</option><option value="first">첫 문장 지정</option><option value="last">끝 문장 지정</option></select></div>
-    <div class="mission-value" data-mission-value hidden><span data-rule-value></span><button type="button" data-redraw-rule>다른 값 뽑기</button></div>
-    <div class="setting-row"><label for="mission-pov">시점</label><select id="mission-pov" data-mission-condition="pov"><option value="">없음</option></select></div>
-    <div class="setting-row"><label for="mission-mood">분위기</label><select id="mission-mood" data-mission-condition="mood"><option value="">없음</option></select></div>
-    <div class="setting-row"><label for="mission-form">묘사 방식</label><select id="mission-form" data-mission-condition="form"><option value="">없음</option></select></div>
-    <p class="mission-note">시점·분위기·묘사 방식은 영수증에 적히기만 해요. 지켰는지는 읽는 사람이 봐요.</p>
+  <dialog id="prompt-dialog" aria-labelledby="prompt-title">
+    <div class="dialog-heading"><h2 id="prompt-title">글감 설정</h2><button data-close-dialog aria-label="글감 설정 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>
+    <div class="setting-row"><label for="prompt-kind">글감 <small>형용사는 모양을 바꿔 써도 돼요</small></label><select id="prompt-kind" data-prompt-kind><option value="noun">명사 + 명사</option><option value="adjective">형용사 + 명사</option></select></div>
+    <div class="setting-row"><label for="prompt-rule">제약 <small>앱이 확인하고 글 뽑기를 막아요</small></label><select id="prompt-rule" data-prompt-rule><option value="">없음</option></select></div>
+    <div class="prompt-value" data-prompt-value hidden><span data-rule-value></span><button type="button" data-redraw-rule>다른 값 뽑기</button></div>
+    <div class="setting-row"><label for="prompt-pov">시점</label><select id="prompt-pov" data-prompt-condition="pov"><option value="">없음</option></select></div>
+    <div class="setting-row"><label for="prompt-mood">분위기</label><select id="prompt-mood" data-prompt-condition="mood"><option value="">없음</option></select></div>
+    <div class="setting-row"><label for="prompt-form">묘사 방식</label><select id="prompt-form" data-prompt-condition="form"><option value="">없음</option></select></div>
+    <p class="prompt-note">시점·분위기·묘사 방식은 영수증에 적히기만 해요. 지켰는지는 읽는 사람이 봐요.</p>
   </dialog>
   <dialog id="pieces-dialog" aria-labelledby="pieces-title">
     <div class="dialog-heading"><h2 id="pieces-title">뽑은 글</h2><button data-close-dialog aria-label="뽑은 글 닫기" type="button" class="icon"><svg><use href="#close-icon"/></svg></button></div>

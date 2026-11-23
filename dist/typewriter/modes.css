@@ -14,16 +14,16 @@
 body:is([data-draft-storage="session"], [data-draft-storage="memory"]) .draft-exports {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px;
 }
-.draft-exports button {
+.draft-exports button, .pieces-button {
   min-height: 28px; color: var(--fg); white-space: nowrap;
   text-decoration: underline; text-underline-offset: 3px;
 }
 .draft-exports button:disabled { opacity: .45; }
-.pieces-button {
-  min-height: 28px; padding: 0; color: var(--fg); font-weight: 600; white-space: nowrap;
-  text-decoration: underline; text-underline-offset: 3px;
-}
+.pieces-button { padding: 0; font-weight: 600; }
 p.receipt-kept { margin: 8px 0 -4px; }
+/* Both typewriters print the rule and conditions under the two words. */
+.receipt-rule, .receipt-conditions { margin-top: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.receipt-rule + .receipt-conditions { margin-top: 2px; }
 
 @media (max-width: 480px) {
   .topnav .nav-links { gap: 8px; }

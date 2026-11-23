@@ -25,12 +25,10 @@ body[data-edition="typewriter"] { display: flow-root; }
 .context-bar { height: auto; min-height: 16px; flex-wrap: wrap; justify-content: space-between; margin-bottom: 13px; }
 .prompt { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 .5em; min-width: 0; }
 .prompt-label { font-size: 12px; font-weight: 600; }
-.prompt .mission-line { font-size: 11px; font-weight: 500; }
+.prompt .prompt-line { font-size: 11px; font-weight: 500; }
 .prompt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; margin-left: auto; }
 .context-bar button { font-size: 12px; }
 .context-bar button:hover { text-decoration: underline; text-underline-offset: 3px; }
-.receipt-rule, .receipt-conditions { margin-top: 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.receipt-rule + .receipt-conditions { margin-top: 2px; }
 .writing-area {
   --inset: clamp(17px, 4vw, 48px);
   --paper-line: color-mix(in srgb, var(--fg) 11%, transparent);
