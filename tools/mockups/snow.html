@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>시안 A · 눈밭</title>
+<style>
+@font-face { font-family: "Noto Sans KR"; src: url("/dist/assets/noto-kr.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: Poppins; src: url("/dist/assets/poppins-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: Poppins; src: url("/dist/assets/poppins-700.woff2") format("woff2"); font-weight: 700; }
+:root {
+  --sky: #e6ecf3; --snow: #f8fafc; --ink: #243247; --muted: #7383a0; --pill: #243247; --pill-text: #fff;
+  --press: rgba(36, 50, 71, .3); --emboss-light: rgba(255, 255, 255, .95); --emboss-dark: rgba(36, 50, 71, .22);
+  --flake: #fff; --flake-edge: rgba(120, 140, 170, .3);
+}
+body[data-night] {
+  --sky: #070d19; --snow: #131f33; --ink: #e9eff8; --muted: #8b9cb8; --pill: #e9eff8; --pill-text: #131f33;
+  --press: rgba(233, 239, 248, .32); --emboss-light: rgba(0, 0, 0, 0); --emboss-dark: rgba(255, 255, 255, .18);
+  --flake: #fff; --flake-edge: transparent;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100svh; display: flex; flex-direction: column;
+  font: 500 14px/1.5 "Noto Sans KR", sans-serif; color: var(--ink);
+  background: linear-gradient(var(--sky), var(--snow) 42%); transition: background .5s, color .5s;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: url("/dist/assets/grain.png"); opacity: .14; mix-blend-mode: multiply;
+}
+body[data-night]::before { mix-blend-mode: screen; opacity: .08; }
+.flakes { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.flakes i {
+  position: absolute; top: -12px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--flake); box-shadow: 0 0 0 1px var(--flake-edge); opacity: .75;
+  animation: fall linear infinite;
+}
+@keyframes fall { to { transform: translate(18px, 110vh); } }
+.flakes i:nth-child(1) { left: 6%; animation-duration: 14s; }
+.flakes i:nth-child(2) { left: 18%; animation-duration: 19s; animation-delay: -6s; width: 5px; height: 5px; }
+.flakes i:nth-child(3) { left: 31%; animation-duration: 16s; animation-delay: -11s; }
+.flakes i:nth-child(4) { left: 44%; animation-duration: 21s; animation-delay: -3s; width: 4px; height: 4px; }
+.flakes i:nth-child(5) { left: 57%; animation-duration: 15s; animation-delay: -9s; }
+.flakes i:nth-child(6) { left: 69%; animation-duration: 18s; animation-delay: -14s; width: 5px; height: 5px; }
+.flakes i:nth-child(7) { left: 81%; animation-duration: 22s; animation-delay: -5s; }
+.flakes i:nth-child(8) { left: 93%; animation-duration: 17s; animation-delay: -12s; width: 4px; height: 4px; }
+header, main, footer { position: relative; z-index: 1; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px 0; }
+.logo { font: 500 19px/1 Poppins, "Noto Sans KR", sans-serif; letter-spacing: -.6px; }
+.logo b { font-weight: 700; }
+.night { border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; color: inherit; background: transparent; cursor: pointer; }
+main { flex: 1; width: min(100% - 44px, 640px); margin: 0 auto; padding: clamp(28px, 7svh, 64px) 0 16px; }
+.label { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+.words { margin: 0 0 22px; font-size: 24px; font-weight: 600; letter-spacing: -.3px; }
+.words i { margin: 0 .35em; font-style: normal; color: var(--muted); font-weight: 400; }
+.words span::after { content: "✓"; margin-left: .18em; font-size: .6em; vertical-align: .15em; color: var(--muted); }
+.paper {
+  min-height: 44svh; outline: none; font-size: 20px; line-height: 2.1; font-weight: 400;
+  text-shadow: 0 1px 0 var(--emboss-light), 0 -1px 1px var(--emboss-dark);
+  caret-color: var(--ink);
+}
+.paper p { margin: 0 0 1.2em; }
+.paper:empty::before { content: "눈 위를 걸어 보세요"; color: var(--muted); }
+.press {
+  position: fixed; z-index: 2; width: 15px; height: 21px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, var(--press), transparent 72%);
+  transform: translate(-50%, -45%) scale(.6); animation: press 1.5s ease-out forwards;
+}
+@keyframes press { 20% { opacity: 1; transform: translate(-50%, -45%) scale(1); } to { opacity: 0; transform: translate(-50%, -45%) scale(1.35); } }
+footer { display: flex; align-items: center; gap: 14px; width: min(100% - 44px, 640px); margin: 0 auto; padding: 10px 0 22px; }
+.count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hint { flex: 1; font-size: 12px; color: var(--muted); }
+.finish { border: 0; border-radius: 999px; padding: 11px 20px; font: inherit; font-weight: 600; color: var(--pill-text); background: var(--pill); cursor: pointer; }
+@media (max-width: 650px) {
+  main { width: calc(100% - 36px); padding-top: 22px; }
+  .words { font-size: 20px; }
+  .paper { font-size: 17px; line-height: 2; min-height: 48svh; }
+  footer { width: calc(100% - 36px); }
+}
+@media (prefers-reduced-motion: reduce) { .flakes i { animation: none; } .press { animation-duration: .4s; } }
+</style>
+</head>
+<body>
+<div class="flakes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<header><span class="logo">gul<b>gam</b></span><button class="night" type="button" aria-pressed="false">밤</button></header>
+<main>
+  <p class="label">오늘의 글감 1번 · 오늘 아침 내린 눈</p>
+  <h1 class="words"><span>생일</span><i>·</i><span>마당</span></h1>
+  <div class="paper" contenteditable="true" spellcheck="false" aria-label="나의 글"><p>생일 아침, 마당에 나가 보니 아무도 없었다. 케이크 대신 빨랫줄에 걸린 이불이 바람에 부풀었다. 나는 그 앞에서 혼자 박수를 쳤다.</p><p>오후에는 동생이 돌아와 마당의 흙에 내 이름을 썼다. 비가 오기 전까지 그 이름은 거기 있었다.</p></div>
+</main>
+<footer><span class="count">129자</span><span class="hint">발자국이 남는 중</span><button class="finish" type="button">글 뽑기</button></footer>
+<script>
+(() => {
+  const paper = document.querySelector('.paper');
+  const count = document.querySelector('.count');
+  let step = 0;
+  function caretRect() {
+    const selection = getSelection();
+    if (!selection.rangeCount) return null;
+    const range = selection.getRangeAt(0).cloneRange();
+    range.collapse(false);
+    let rect = range.getBoundingClientRect();
+    if (!rect.height) {
+      const mark = document.createElement('span');
+      mark.textContent = '​';
+      range.insertNode(mark);
+      rect = mark.getBoundingClientRect();
+      mark.remove();
+      paper.normalize();
+    }
+    return rect;
+  }
+  paper.addEventListener('input', () => {
+    count.textContent = Array.from(paper.textContent.replace(/\s+/g, ' ').trim()).length + '자';
+    const rect = caretRect();
+    if (!rect) return;
+    const mark = document.createElement('i');
+    mark.className = 'press';
+    step = (step + 1) % 2;
+    mark.style.left = rect.left - 9 + (step ? 3 : -3) + 'px';
+    mark.style.top = rect.top + rect.height * .55 + 'px';
+    document.body.append(mark);
+    mark.addEventListener('animationend', () => mark.remove());
+  });
+  const night = document.querySelector('.night');
+  night.addEventListener('click', () => {
+    const on = !document.body.hasAttribute('data-night');
+    document.body.toggleAttribute('data-night', on);
+    night.setAttribute('aria-pressed', String(on));
+    night.textContent = on ? '낮' : '밤';
+  });
+  if (new URLSearchParams(location.search).has('night')) night.click();
+})();
+</script>
+</body>
+</html>

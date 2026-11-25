@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>글감 글쓰기 화면 시안 3개</title>
+<style>
+@font-face { font-family: "Noto Sans KR"; src: url("/dist/assets/noto-kr.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 28px 24px 60px; font: 500 14px/1.6 "Noto Sans KR", sans-serif; color: #1c1c1c; background: #e9e9e9; }
+h1 { margin: 0 0 4px; font-size: 22px; }
+.intro { margin: 0 0 30px; color: #666; }
+section { margin-bottom: 56px; }
+h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0 0 6px; font-size: 18px; }
+h2 small { font-size: 14px; font-weight: 500; color: #555; }
+.notes { margin: 0 0 16px; padding: 0; list-style: none; display: grid; gap: 2px; max-width: 760px; color: #444; font-size: 13px; }
+.notes b { color: #1c1c1c; }
+.frames { display: grid; grid-template-columns: 375px minmax(0, 1fr) 176px; gap: 18px; align-items: start; }
+.phone { width: 375px; height: 720px; border: 7px solid #1f1f1f; border-radius: 30px; overflow: hidden; background: #000; }
+.desktop { height: 720px; border: 1px solid #bbb; border-radius: 8px; overflow: hidden; background: #fff; }
+.card { display: grid; gap: 6px; justify-items: center; }
+.card canvas { width: 162px; height: 288px; border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, .18); }
+.card p { margin: 0; font-size: 12px; color: #666; }
+iframe { display: block; width: 100%; height: 100%; border: 0; }
+.open { display: inline-block; margin-top: 10px; font-size: 13px; color: #1c1c1c; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 1180px) {
+  .frames { grid-template-columns: 375px 176px; }
+  .desktop { grid-column: 1 / -1; height: 600px; }
+}
+@media (max-width: 640px) {
+  body { padding: 20px 14px 40px; }
+  .frames { grid-template-columns: 1fr; }
+  .phone { width: 100%; max-width: 375px; height: 640px; }
+  .desktop { display: none; }
+}
+</style>
+</head>
+<body>
+<h1>글감 글쓰기 화면 시안 3개</h1>
+<p class="intro">같은 글(오늘의 글감 1번 · 생일 · 마당, 129자), 같은 글쓰기 화면. 각 시안 안에서 직접 타자를 칠 수 있습니다. 오른쪽은 그 시안이 공유 카드가 되었을 때의 모습입니다.</p>
+
+<section>
+  <h2>A · 눈밭 <small>글감은 아침에 내린 눈밭이다. 글은 그 위를 걸은 발자국이다.</small></h2>
+  <ul class="notes">
+    <li><b>강점</b> 오늘의 글감 = 아침마다 새로 내린 눈. 모두가 같은 눈밭을 걷는다. 글자가 눈에 눌려 찍히고, 공유 카드는 위에서 본 발자국이라 글을 가릴 이유가 저절로 생긴다. 낮·밤으로 라이트·다크가 나온다(오른쪽 위 ‘밤’).</li>
+    <li><b>비용</b> 영수증 세계관과 부딪혀 영수증은 보조 내보내기로 내려간다. 겨울 한정으로 보이지 않게 ‘하얀 들판’으로 열어 두어야 한다.</li>
+  </ul>
+  <div class="frames">
+    <div class="phone"><iframe src="snow.html" title="눈밭 · 폰"></iframe></div>
+    <div class="desktop"><iframe src="snow.html" title="눈밭 · 데스크톱"></iframe></div>
+    <div class="card"><canvas data-card="snow" width="324" height="576"></canvas><p>공유 카드가 되면</p></div>
+  </div>
+  <a class="open" href="snow.html" target="_blank">크게 열기</a> · <a class="open" href="snow.html?night" target="_blank">밤으로 열기</a>
+</section>
+
+<section>
+  <h2>B · 원고지 <small>글감은 200자 원고지 한 장이다. 글자 하나가 칸 하나.</small></h2>
+  <ul class="notes">
+    <li><b>강점</b> 가장 한국적이고 타이핑웍스와 완전히 다르다. 칸이 곧 글자 수라 ‘150자 이내’ 제약이 선 하나로 보인다. 공유 카드는 채워진 칸만 남은 원고지라 역시 글이 가려진다. 한 장(200자)이 글 길이의 자연스러운 상한이 된다.</li>
+    <li><b>비용</b> 폰에서 20칸은 글자가 작다(15칸으로 줄이는 안 있음). 긴 글은 두 장째로 넘어가야 한다. 다크 모드는 종이가 아니라 책상 조명을 낮추는 식이 된다.</li>
+  </ul>
+  <div class="frames">
+    <div class="phone"><iframe src="manuscript.html" title="원고지 · 폰"></iframe></div>
+    <div class="desktop"><iframe src="manuscript.html" title="원고지 · 데스크톱"></iframe></div>
+    <div class="card"><canvas data-card="manuscript" width="324" height="576"></canvas><p>공유 카드가 되면</p></div>
+  </div>
+  <a class="open" href="manuscript.html" target="_blank">크게 열기</a>
+</section>
+
+<section>
+  <h2>C · 편의점 영수증 <small>글감은 24시간 편의점이다. 두 단어를 담아 계산하면 영수증이 나온다.</small></h2>
+  <ul class="notes">
+    <li><b>강점</b> 지금 만든 영수증 출력·영수증 이미지·먹줄 카드를 그대로 쓴다. 쓰는 화면 자체가 영수증 종이가 되어 타이핑웍스 느낌이 사라진다. 두 단어가 ‘담은 물건’이 되어 규칙이 직관적이다.</li>
+    <li><b>비용</b> Receiptify 이후 영수증 형식은 흔하다. 밤 편의점이라 기본이 어두운 화면이고 라이트 모드가 약하다.</li>
+  </ul>
+  <div class="frames">
+    <div class="phone"><iframe src="receipt.html" title="영수증 · 폰"></iframe></div>
+    <div class="desktop"><iframe src="receipt.html" title="영수증 · 데스크톱"></iframe></div>
+    <div class="card"><canvas data-card="receipt" width="324" height="576"></canvas><p>공유 카드가 되면</p></div>
+  </div>
+  <a class="open" href="receipt.html" target="_blank">크게 열기</a>
+</section>
+
+<script>
+(() => {
+  const text = '생일 아침, 마당에 나가 보니 아무도 없었다. 케이크 대신 빨랫줄에 걸린 이불이 바람에 부풀었다. 나는 그 앞에서 혼자 박수를 쳤다.\n오후에는 동생이 돌아와 마당의 흙에 내 이름을 썼다. 비가 오기 전까지 그 이름은 거기 있었다.';
+  const sans = '"Noto Sans KR", sans-serif';
+  const W = 324, H = 576;
+
+  // Words laid out as on the card, each with its measured width.
+  function wordRows(ctx, font, maxWidth) {
+    ctx.font = font;
+    const space = ctx.measureText(' ').width;
+    const rows = [];
+    for (const paragraph of text.split('\n')) {
+      let row = [], x = 0;
+      for (const word of paragraph.split(' ')) {
+        const width = ctx.measureText(word).width;
+        if (x + width > maxWidth && row.length) { rows.push(row); row = []; x = 0; }
+        row.push({ x, width });
+        x += width + space;
+      }
+      rows.push(row);
+      rows.push([]);
+    }
+    rows.pop();
+    return rows;
+  }
+
+  const cards = {
+    snow(ctx) {
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, '#e3eaf2'); sky.addColorStop(.45, '#f8fafc'); sky.addColorStop(1, '#f1f4f8');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#7383a0'; ctx.font = '500 13px ' + sans; ctx.fillText('오늘의 글감 1번', 32, 70);
+      ctx.fillStyle = '#243247'; ctx.font = '600 30px ' + sans; ctx.fillText('생일 · 마당', 32, 108);
+      let y = 170;
+      const rows = wordRows(ctx, '400 15px ' + sans, W - 64);
+      let step = 0;
+      for (const row of rows) {
+        for (const { x, width } of row) {
+          step++;
+          const cx = 32 + x + width / 2, cy = y + (step % 2 ? -2 : 2);
+          const glow = ctx.createRadialGradient(cx, cy, 1, cx, cy, Math.max(width / 2, 9));
+          glow.addColorStop(0, 'rgba(36,50,71,.34)'); glow.addColorStop(1, 'rgba(36,50,71,0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(width / 2 + 3, 9), 9, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        y += row.length ? 30 : 14;
+      }
+      ctx.fillStyle = '#7383a0'; ctx.font = '500 13px ' + sans;
+      ctx.fillText('0:42 · 129자 · 발자국 24개', 32, H - 56);
+      ctx.fillText('gulgam.dokhustudio.com', 32, H - 34);
+    },
+    manuscript(ctx) {
+      ctx.fillStyle = '#e7dfcf'; ctx.fillRect(0, 0, W, H);
+      const left = 24, top = 150, cell = (W - 48) / 20;
+      ctx.fillStyle = '#faf5ea'; ctx.fillRect(14, 26, W - 28, H - 52);
+      ctx.fillStyle = '#8a7f70'; ctx.font = '500 12px ' + sans; ctx.fillText('오늘의 글감 1번', left, 68);
+      ctx.fillStyle = '#2b241c'; ctx.font = '600 26px serif'; ctx.fillText('생일 · 마당', left, 104);
+      ctx.strokeStyle = 'rgba(196,84,58,.55)'; ctx.lineWidth = 1;
+      for (let c = 0; c <= 20; c++) { ctx.beginPath(); ctx.moveTo(left + c * cell + .5, top); ctx.lineTo(left + c * cell + .5, top + cell * 10); ctx.stroke(); }
+      for (let r = 0; r <= 10; r++) { ctx.beginPath(); ctx.moveTo(left, top + r * cell + .5); ctx.lineTo(left + cell * 20, top + r * cell + .5); ctx.stroke(); }
+      ctx.fillStyle = '#2b241c';
+      let at = 0;
+      for (const glyph of text) {
+        if (glyph === '\n') { at = Math.ceil((at + 1) / 20) * 20; continue; }
+        if (at >= 200) break;
+        if (glyph !== ' ') ctx.fillRect(left + (at % 20) * cell + 3, top + Math.floor(at / 20) * cell + 3, cell - 6, cell - 6);
+        at++;
+      }
+      ctx.fillStyle = '#8a7f70'; ctx.font = '500 12px ' + sans;
+      ctx.fillText('129 / 200 · 0:42', left, top + cell * 10 + 34);
+      ctx.fillText('gulgam.dokhustudio.com', left, H - 48);
+    },
+    receipt(ctx) {
+      ctx.fillStyle = '#151515'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fdfcf8'; ctx.fillRect(28, 44, W - 56, H - 88);
+      const left = 46;
+      ctx.textAlign = 'center'; ctx.fillStyle = '#1a1a1a'; ctx.font = '700 14px ' + sans; ctx.fillText('글 감 편 의 점', W / 2, 82);
+      ctx.fillStyle = '#6f6b64'; ctx.font = '400 10px ' + sans; ctx.fillText('오늘의 글감 1번 · 2026.11.23 09:12', W / 2, 100);
+      ctx.textAlign = 'left';
+      const dash = y => { ctx.save(); ctx.strokeStyle = '#c6c1b7'; ctx.setLineDash([2, 5]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(W - left, y); ctx.stroke(); ctx.restore(); };
+      dash(116);
+      ctx.fillStyle = '#1a1a1a'; ctx.font = '500 14px ' + sans;
+      ctx.fillText('생일', left, 142); ctx.fillText('마당', left, 164);
+      ctx.textAlign = 'right'; ctx.fillText('1개 ✓', W - left, 142); ctx.fillText('1개 ✓', W - left, 164); ctx.textAlign = 'left';
+      dash(182);
+      let y = 212;
+      for (const row of wordRows(ctx, '400 12px ' + sans, W - left * 2)) {
+        for (const { x, width } of row) { ctx.fillStyle = '#1d1d1d'; ctx.fillRect(left + x, y - 11, width, 14); }
+        y += row.length ? 22 : 10;
+      }
+      dash(y + 6);
+      ctx.fillStyle = '#6f6b64'; ctx.font = '500 11px ' + sans;
+      ctx.fillText('소계 129자 · 걸린 시간 0:42', left, y + 32);
+      ctx.fillStyle = '#1a1a1a';
+      for (let x = left; x < W - left; x += 5) ctx.fillRect(x, y + 48, x % 3 ? 2 : 3, 26);
+      ctx.fillStyle = '#6f6b64'; ctx.font = '500 10px ' + sans; ctx.textAlign = 'center';
+      ctx.fillText('gulgam.dokhustudio.com', W / 2, y + 92);
+    }
+  };
+  document.fonts.load('500 14px "Noto Sans KR"').catch(() => null).then(() => {
+    for (const canvas of document.querySelectorAll('canvas[data-card]')) cards[canvas.dataset.card](canvas.getContext('2d'));
+  });
+})();
+</script>
+</body>
+</html>

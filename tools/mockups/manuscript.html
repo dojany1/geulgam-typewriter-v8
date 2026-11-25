@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>시안 B · 원고지</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&display=swap">
+<style>
+@font-face { font-family: "Noto Sans KR"; src: url("/dist/assets/noto-kr.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: Poppins; src: url("/dist/assets/poppins-500.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: Poppins; src: url("/dist/assets/poppins-700.woff2") format("woff2"); font-weight: 700; }
+:root {
+  --desk: #e7dfcf; --paper: #faf5ea; --line: rgba(196, 84, 58, .5); --line-strong: #c4543a; --ink: #2b241c; --muted: #8a7f70;
+  --serif: "Noto Serif KR", serif; --sans: "Noto Sans KR", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100svh; display: flex; flex-direction: column; font: 500 14px/1.5 var(--sans); color: var(--ink); background: var(--desk); }
+header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px 0; }
+.logo { font: 500 19px/1 Poppins, var(--sans); letter-spacing: -.6px; }
+.logo b { font-weight: 700; }
+.edition { font-size: 12px; color: var(--muted); }
+main { flex: 1; width: min(100% - 40px, 760px); margin: 0 auto; padding: clamp(20px, 5svh, 48px) 0 18px; }
+.sheet { position: relative; padding: 22px 24px 26px; background: var(--paper); box-shadow: 0 1px 0 #fff inset, 0 14px 30px rgba(60, 40, 10, .14); }
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; font-family: var(--serif); }
+.head .title { font-size: 13px; color: var(--muted); }
+.head .words { font-size: 20px; font-weight: 600; letter-spacing: -.2px; }
+.head .words i { margin: 0 .3em; font-style: normal; font-weight: 400; color: var(--muted); }
+.head .words span::after { content: "✓"; margin-left: .15em; font-family: var(--sans); font-size: .6em; vertical-align: .2em; color: var(--line-strong); }
+.grid { position: relative; display: grid; grid-template-columns: repeat(20, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.grid b {
+  aspect-ratio: 1; display: grid; place-items: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  font: 400 17px/1 var(--serif); position: relative;
+}
+.grid b:nth-child(20n) { border-right-color: var(--line-strong); }
+.grid b:nth-child(n+181) { border-bottom-color: var(--line-strong); }
+.grid b.caret::after { content: ""; position: absolute; inset: 2px; border: 1.5px solid var(--line-strong); animation: blink 1s steps(2) infinite; }
+.grid b.limit::before { content: ""; position: absolute; right: -1px; top: -1px; bottom: -1px; border-right: 2px solid var(--line-strong); }
+@keyframes blink { 50% { opacity: 0; } }
+textarea { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; resize: none; font: inherit; }
+.foot { display: flex; align-items: center; gap: 14px; margin-top: 14px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.foot .rule { flex: 1; }
+.foot .rule::before { content: ""; display: inline-block; width: 10px; border-top: 2px solid var(--line-strong); vertical-align: middle; margin-right: 6px; }
+.seal {
+  width: 54px; height: 54px; border: 2px solid var(--line-strong); border-radius: 50%; background: transparent;
+  font: 600 13px/1.15 var(--serif); color: var(--line-strong); cursor: pointer; transform: rotate(-8deg);
+}
+.seal:hover { background: var(--line-strong); color: var(--paper); }
+@media (max-width: 650px) {
+  main { width: calc(100% - 24px); padding-top: 16px; }
+  .sheet { padding: 16px 12px 18px; }
+  .head .words { font-size: 17px; }
+  .grid b { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<header><span class="logo">gul<b>gam</b></span><span class="edition">200자 원고지</span></header>
+<main>
+  <article class="sheet">
+    <div class="head"><span class="title">오늘의 글감 1번 · 2026. 11. 23.</span><span class="words"><span>생일</span><i>·</i><span>마당</span></span></div>
+    <div class="grid" aria-hidden="true"></div>
+    <textarea aria-label="나의 글" spellcheck="false">생일 아침, 마당에 나가 보니 아무도 없었다. 케이크 대신 빨랫줄에 걸린 이불이 바람에 부풀었다. 나는 그 앞에서 혼자 박수를 쳤다.
+오후에는 동생이 돌아와 마당의 흙에 내 이름을 썼다. 비가 오기 전까지 그 이름은 거기 있었다.</textarea>
+    <div class="foot"><span class="count">129 / 200</span><span class="rule">150자 이내 · 칸에 선으로 보임</span><button class="seal" type="button">글<br>뽑기</button></div>
+  </article>
+</main>
+<script>
+(() => {
+  const grid = document.querySelector('.grid');
+  const field = document.querySelector('textarea');
+  const count = document.querySelector('.count');
+  const columns = 20, rows = 10, limit = 150;
+  const cells = Array.from({ length: columns * rows }, () => document.createElement('b'));
+  grid.append(...cells);
+  cells[limit - 1].classList.add('limit');
+  function render() {
+    for (const cell of cells) { cell.textContent = ''; cell.classList.remove('caret'); }
+    let at = 0;
+    let letters = 0;
+    for (const glyph of field.value) {
+      // A new paragraph starts on the next row, one cell in.
+      if (glyph === '\n') { at = Math.ceil((at + 1) / columns) * columns + 1; continue; }
+      if (at >= cells.length) break;
+      if (glyph !== ' ') cells[at].textContent = glyph;
+      letters++;
+      at++;
+    }
+    if (at < cells.length) cells[at].classList.add('caret');
+    count.textContent = letters + ' / ' + columns * rows;
+  }
+  field.addEventListener('input', render);
+  grid.addEventListener('click', () => field.focus());
+  render();
+})();
+</script>
+</body>
+</html>
