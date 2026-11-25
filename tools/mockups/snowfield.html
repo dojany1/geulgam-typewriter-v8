@@ -1,66 +1,49 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>시안 A2 · 눈밭, 기존 골자 그대로</title>
+<title>시안 A3 · 흰 도화지에 검은 글자가 찍힌다</title>
 <link rel="stylesheet" href="/dist/common.css">
 <link rel="stylesheet" href="/dist/styles.css">
 <style>
-/* The layout is the live basic mode. Only the writing surface changes: it is a
-   field of snow, every letter is pressed into it, and each press makes a sound. */
-:root {
-  --field: light-dark(#f5f7fa, #121c2e);
-  --field-edge: light-dark(#e6ebf2, #0c1424);
-  --snow-ink: light-dark(#233047, #e8eef8);
-  --press-light: light-dark(rgba(255, 255, 255, .95), rgba(0, 0, 0, 0));
-  --press-dark: light-dark(rgba(35, 48, 71, .28), rgba(255, 255, 255, .22));
-  --lift: light-dark(rgba(35, 48, 71, .35), rgba(0, 0, 0, .5));
-  --dip: light-dark(rgba(35, 48, 71, .34), rgba(255, 255, 255, .26));
-  --spray: light-dark(#fff, #dfe7f3);
+/* The live basic-mode layout on a sheet of white paper. Every letter is a black
+   print stamped into the snow, and every stamp crunches. Always light. */
+:root[data-theme="light"] { --bg: #fbfbf9; --fg: #111; --line: #d9d9d4; }
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: url("/dist/assets/grain.png"); opacity: .16; mix-blend-mode: multiply;
 }
-.writing-area {
-  position: relative; border-top: 0; padding: 18px 26px 12px; margin-inline: -26px; border-radius: 6px;
-  background: radial-gradient(120% 80% at 50% 0%, var(--field), var(--field-edge));
-  box-shadow: inset 0 1px 0 light-dark(#fff, rgba(255, 255, 255, .05)), 0 1px 2px light-dark(rgba(35, 48, 71, .06), transparent);
-}
-.writing-area::before {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: url("/dist/assets/grain.png"); opacity: .13; mix-blend-mode: multiply;
-}
-:root[data-theme="dark"] .writing-area::before { mix-blend-mode: screen; opacity: .07; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .writing-area::before { mix-blend-mode: screen; opacity: .07; } }
-#words { color: light-dark(#6f7c95, #8f9fbb); }
+.topnav, .workspace { position: relative; z-index: 1; }
+.writing-area { position: relative; }
+#words { color: #8a8a86; }
 [data-prompt-word][data-used="true"]::after { visibility: visible; }
-#editor { color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--snow-ink); position: relative; z-index: 2; }
-#editor::placeholder { -webkit-text-fill-color: light-dark(#8d97a8, #6f7d95); }
-.snow-layer, .snow-fx { position: absolute; left: 26px; right: 26px; pointer-events: none; overflow: hidden; }
+#editor { color: transparent; -webkit-text-fill-color: transparent; caret-color: #111; position: relative; z-index: 2; }
+#editor::placeholder { -webkit-text-fill-color: #a3a39e; }
+.snow-layer, .snow-fx { position: absolute; left: 0; right: 0; pointer-events: none; overflow: hidden; }
 .snow-layer {
-  z-index: 1; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--snow-ink);
+  z-index: 1; white-space: pre-wrap; overflow-wrap: anywhere; color: #111;
   font: 400 23px/var(--writing-line-height) var(--text-font); letter-spacing: -.35px;
 }
-.snow-fx { z-index: 3; }
-.g { position: relative; text-shadow: 0 1px 0 var(--press-light), 0 -1px 1px var(--press-dark); }
-.g.land { animation: land .26s cubic-bezier(.2, .9, .3, 1) both; }
-@keyframes land {
-  0% { top: -5px; opacity: .35; text-shadow: 0 6px 10px var(--lift); }
-  45% { top: 1px; opacity: 1; text-shadow: 0 2px 3px var(--lift); }
-  100% { top: 0; text-shadow: 0 1px 0 var(--press-light), 0 -1px 1px var(--press-dark); }
+.snow-fx { z-index: 3; font: 400 23px/var(--writing-line-height) var(--text-font); letter-spacing: -.35px; }
+.g { position: relative; }
+.g.land { animation: stamp .24s cubic-bezier(.25, .9, .3, 1) both; }
+@keyframes stamp {
+  0% { top: -4px; color: rgba(17, 17, 17, .08); }
+  55% { top: 1px; color: #111; }
+  100% { top: 0; }
 }
-.dip {
-  position: absolute; border-radius: 50%; transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse at 50% 50%, var(--dip), transparent 70%);
-  animation: dip .7s ease-out both;
+/* The print itself: a soft copy of the glyph that spreads and settles, like snow giving under a foot. */
+.print {
+  position: absolute; color: rgba(0, 0, 0, .55); filter: blur(2.5px); white-space: pre;
+  transform-origin: 50% 70%; animation: print .55s cubic-bezier(.2, .8, .3, 1) both;
 }
-@keyframes dip { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); } 25% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); } }
-.spray {
-  position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--spray);
-  box-shadow: 0 0 0 .5px light-dark(rgba(35, 48, 71, .25), transparent);
-  animation: spray .42s cubic-bezier(.2, .6, .4, 1) both;
+@keyframes print {
+  0% { opacity: 0; transform: scale(1.25); }
+  30% { opacity: .9; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1); }
 }
-@keyframes spray { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
-@media (prefers-reduced-motion: reduce) { .g.land, .dip, .spray { animation: none; } }
-.note { margin: 0 0 18px; color: var(--muted); font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .g.land, .print { animation: none; } }
 </style>
 </head>
 <body data-view="write" data-edition="original">
@@ -74,7 +57,6 @@
     <symbol id="download-icon" viewBox="0 0 24 24"><path d="M12 2.5v12.8m-5-5 5 5 5-5M3.5 17v4.3h17V17"/></symbol>
     <symbol id="print-icon" viewBox="0 0 24 24"><path d="M7 8V2.8h10V8M7 16H3.5V8h17v8H17M7 13h10v8H7zM16.5 10.5h1"/></symbol>
     <symbol id="dots" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="4.5" cy="12" r="2.1"/><circle cx="12" cy="12" r="2.1"/><circle cx="19.5" cy="12" r="2.1"/></g></symbol>
-    <symbol id="tone" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path fill="currentColor" stroke="none" d="M12 3a9 9 0 0 1 0 18z"/></symbol>
     <symbol id="share-icon" viewBox="0 0 24 24"><path d="M12 3v12m-4.5-7.5L12 3l4.5 4.5M5 13v7.5h14V13"/></symbol>
     <symbol id="rule-icon" viewBox="0 0 24 24"><path d="M4 6.5h9m5 0h2M4 12h3m5 0h8M4 17.5h11m5 0h0"/><circle cx="15.5" cy="6.5" r="2"/><circle cx="9.5" cy="12" r="2"/><circle cx="17.5" cy="17.5" r="2"/></symbol>
   </svg>
@@ -85,7 +67,6 @@
       <button type="button" class="nav-reroll">글감 뽑기</button>
       <a href="#" class="edition-link">타자기 버전</a>
       <button type="button" class="nav-settings">설정</button>
-      <button class="icon mode-button" type="button" data-theme-toggle aria-label="화면 테마 전환" title="화면 테마 전환"><svg><use href="#tone"/></svg></button>
     </nav>
   </header>
   <main class="column workspace">
@@ -164,32 +145,24 @@
     });
     layer.replaceChildren(fragment);
     layer.scrollTop = editor.scrollTop;
-    const areaRect = area.getBoundingClientRect();
-    for (const span of landed) press(span, areaRect);
+    const layerRect = layer.getBoundingClientRect();
+    for (const span of landed) print(span, layerRect);
     shown = editor.value;
     document.getElementById('word-count').textContent = glyphs.length + '자';
     for (const word of document.querySelectorAll('[data-prompt-word]')) word.dataset.used = String(editor.value.includes(word.textContent));
   }
 
-  // A dip under the glyph and a little spray of snow from its foot.
-  function press(span, areaRect) {
+  // The print is the glyph's own shape: a blurred copy that spreads and settles under it.
+  function print(span, layerRect) {
     const rect = span.getBoundingClientRect();
-    const x = rect.left - areaRect.left + rect.width / 2 - 26;
-    const y = rect.top - areaRect.top + rect.height * .58;
-    const dip = document.createElement('i');
-    dip.className = 'dip';
-    dip.style.cssText = `left:${x}px;top:${y - editor.offsetTop}px;width:${rect.width + 16}px;height:${rect.height * .9}px`;
-    const made = [dip];
-    for (let i = 0; i < 3; i++) {
-      const dot = document.createElement('i');
-      dot.className = 'spray';
-      const dx = (Math.random() - .5) * 18;
-      dot.style.cssText = `left:${x + (Math.random() - .5) * rect.width}px;top:${y - editor.offsetTop + 6}px;--dx:${dx}px;--dy:${4 + Math.random() * 9}px;animation-delay:${i * 25}ms`;
-      made.push(dot);
-    }
-    fx.append(...made);
+    const copy = document.createElement('span');
+    copy.className = 'print';
+    copy.textContent = span.textContent;
+    copy.style.left = rect.left - layerRect.left + 'px';
+    copy.style.top = rect.top - layerRect.top + 'px';
+    fx.append(copy);
     // A hidden tab pauses animations, so a timer cleans up rather than animationend.
-    setTimeout(() => { for (const node of made) node.remove(); }, 900);
+    setTimeout(() => copy.remove(), 700);
   }
 
   // Only the changed stretch lands: common prefix and suffix stay as they are.
@@ -202,9 +175,10 @@
     return [start, endB];
   }
 
-  // 뽀드득: a crackle of filtered noise, a softer body under it, and a faint thump.
+  // 뽀드득: snow does not click, it crumbles. A step is a cluster of tiny
+  // crackles, dense at first and thinning out, over a soft give underneath.
   let audio, noise;
-  const master = { gain: .55 };
+  const master = .5;
   function ensureAudio() {
     if (!soundOn()) return false;
     if (!audio) {
@@ -216,42 +190,36 @@
     if (audio.state === 'suspended') audio.resume().catch(() => null);
     return true;
   }
-  function hiss(at, type, frequency, q, length, strength) {
+  function grain(at, type, frequency, q, attack, length, strength) {
     const source = audio.createBufferSource();
     source.buffer = noise;
     const filter = audio.createBiquadFilter();
     filter.type = type; filter.frequency.value = frequency; filter.Q.value = q;
     const gain = audio.createGain();
     gain.gain.setValueAtTime(.0001, at);
-    gain.gain.exponentialRampToValueAtTime(strength * master.gain, at + .004);
-    gain.gain.exponentialRampToValueAtTime(.0001, at + length);
+    gain.gain.exponentialRampToValueAtTime(strength * master, at + attack);
+    gain.gain.exponentialRampToValueAtTime(.0001, at + attack + length);
     source.connect(filter).connect(gain).connect(audio.destination);
-    source.start(at, Math.random() * .6, length + .02);
+    source.start(at, Math.random() * .7, attack + length + .01);
   }
-  function thump(at, strength) {
-    const osc = audio.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(130, at);
-    osc.frequency.exponentialRampToValueAtTime(60, at + .06);
-    const gain = audio.createGain();
-    gain.gain.setValueAtTime(.0001, at);
-    gain.gain.exponentialRampToValueAtTime(strength * master.gain, at + .003);
-    gain.gain.exponentialRampToValueAtTime(.0001, at + .07);
-    osc.connect(gain).connect(audio.destination);
-    osc.start(at); osc.stop(at + .08);
+  function step(at, weight, span) {
+    const crackles = Math.round(14 * weight + Math.random() * 6);
+    for (let i = 0; i < crackles; i++) {
+      const t = at + Math.pow(Math.random(), 1.7) * span;
+      const fade = 1 - (t - at) / span * .6;
+      grain(t, 'bandpass', 2600 + Math.random() * 4200, 6, .002, .006 + Math.random() * .014, .42 * weight * fade);
+    }
+    grain(at, 'lowpass', 420 + Math.random() * 120, .7, .018, span * .9, .2 * weight);
+    grain(at + span * .3, 'bandpass', 1200, 1.2, .01, span * .5, .09 * weight);
   }
   function crunch(kind) {
     if (!ensureAudio()) return;
-    const at = audio.currentTime + .003;
+    const at = audio.currentTime + .004;
     const vary = .85 + Math.random() * .3;
-    if (kind === 'delete') { hiss(at, 'highpass', 4200, .7, .05, .22 * vary); return; }
-    if (kind === 'return') { crunchStep(at, 1.1); crunchStep(at + .11, .9); return; }
-    crunchStep(at, kind === 'space' ? 1.25 : vary, kind === 'space');
-  }
-  function crunchStep(at, weight, heavy) {
-    hiss(at, 'bandpass', (heavy ? 1900 : 3100) * (.9 + Math.random() * .2), .9, heavy ? .12 : .075, .5 * weight);
-    hiss(at + .006, 'lowpass', 650, .6, heavy ? .1 : .06, .3 * weight);
-    thump(at, .14 * weight);
+    if (kind === 'delete') { step(at, .45 * vary, .07); return; }
+    if (kind === 'return') { step(at, 1.05, .14); step(at + .13, .9, .13); return; }
+    if (kind === 'space') { step(at, 1.2 * vary, .16); return; }
+    step(at, vary, .1);
   }
 
   const soundButton = document.getElementById('sound');
@@ -269,12 +237,6 @@
     else if (event.data === ' ') crunch('space');
     else if (to > from) crunch('key');
     render(from, to);
-  });
-
-  document.querySelector('[data-theme-toggle]').addEventListener('click', () => {
-    const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-    const current = document.documentElement.dataset.theme || (dark ? 'dark' : 'light');
-    document.documentElement.dataset.theme = current === 'dark' ? 'light' : 'dark';
   });
 
   fit();
