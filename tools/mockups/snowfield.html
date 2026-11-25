@@ -3,53 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>시안 A4 · 눈밭에 도장처럼 찍힌다</title>
+<title>시안 A5 · 눈밭에 가라앉는 글자</title>
 <link rel="stylesheet" href="/dist/common.css">
 <link rel="stylesheet" href="/dist/styles.css">
 <style>
-/* The live basic-mode layout on the snowfield from the first mockup: sky fading
-   into snow, ink the colour of shadow on snow. Each letter comes straight down
-   onto the surface like a seal and stays pressed in. No sound. */
+/* The live basic-mode layout on a field of fresh snow. A letter is a footprint:
+   it does not arrive, the surface gives. Nothing moves or spreads; the glyph
+   sinks where it is, its walls fall into shadow, its floor stays lit, and a
+   rim of pushed-up snow brightens around it. Deleting fills the print back in. */
 :root[data-theme="light"] { --bg: #f8fafc; --fg: #243247; --muted: #7383a0; --line: #d3dbe6; --accent: #ff5224; }
-:root { --sky: #e4ebf3; --snow: #f8fafc; --ink: #243247; }
-body { background: linear-gradient(var(--sky), var(--snow) 42%) fixed; }
+:root { --sky: #e4ebf3; --snow: #f9fbfd; --wall: #22304a; --floor: #6c82a4; --rim: rgba(255, 255, 255, .98); --shade: rgba(34, 48, 74, .34); }
+body {
+  background:
+    radial-gradient(55% 32% at 18% 46%, rgba(255, 255, 255, .85), transparent 70%),
+    radial-gradient(46% 30% at 72% 68%, rgba(221, 229, 239, .7), transparent 70%),
+    radial-gradient(40% 26% at 50% 90%, rgba(255, 255, 255, .7), transparent 70%),
+    linear-gradient(var(--sky), var(--snow) 42%);
+  background-attachment: fixed;
+}
 body::before {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background: url("/dist/assets/grain.png"); opacity: .14; mix-blend-mode: multiply;
+  background: url("/dist/assets/grain.png"); opacity: .15; mix-blend-mode: multiply;
 }
 .topnav, .workspace { position: relative; z-index: 1; }
 .writing-area { position: relative; border-top-color: #cfd8e3; }
 #words { color: var(--muted); }
 [data-prompt-word][data-used="true"]::after { visibility: visible; }
-#editor { color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--ink); position: relative; z-index: 2; }
+#editor { color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--wall); position: relative; z-index: 2; }
 #editor::placeholder { -webkit-text-fill-color: #9aa7bb; }
 .snow-layer, .snow-fx { position: absolute; left: 0; right: 0; pointer-events: none; overflow: hidden; }
 .snow-layer, .snow-fx { font: 400 23px/var(--writing-line-height) var(--text-font); letter-spacing: -.35px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.snow-layer { z-index: 1; color: var(--ink); }
+.snow-layer { z-index: 1; }
 .snow-fx { z-index: 3; }
-/* A pressed letter: a hair of light below, a hair of shadow above. */
-.g { position: relative; text-shadow: 0 1px 0 rgba(255, 255, 255, .95), 0 -1px 1px rgba(36, 50, 71, .22); }
-/* The real glyph stays out of sight until the seal touches down (40% of the stamp). */
-.g.land { animation: appear .32s linear both; }
-@keyframes appear {
-  0%, 39% { color: transparent; text-shadow: none; }
-  40%, 100% { color: var(--ink); text-shadow: 0 1px 0 rgba(255, 255, 255, .95), 0 -1px 1px rgba(36, 50, 71, .22); }
+/* A print: shadowed wall at the top, lit floor at the bottom, bright rim of pushed snow below. */
+.g, .ghost {
+  color: transparent; -webkit-text-fill-color: transparent;
+  background: linear-gradient(var(--wall) 18%, var(--floor) 92%);
+  -webkit-background-clip: text; background-clip: text;
+  filter: drop-shadow(0 1px 0 var(--rim)) drop-shadow(0 -1px 1px var(--shade));
 }
-/* The seal: the letter's own shape, large and faint while it is still in the air,
-   dropping straight down, touching at 40%, pressing in, then handing over. */
-.stamp {
-  position: absolute; color: var(--ink); white-space: pre; transform-origin: 50% 62%;
-  animation: stamp .32s linear both;
+.g.land { animation: sink .17s ease-out both; }
+@keyframes sink {
+  0% { opacity: .18; filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0)) drop-shadow(0 0 0 rgba(34, 48, 74, 0)); }
+  30% { opacity: .5; filter: drop-shadow(0 .5px 0 rgba(255, 255, 255, .5)) drop-shadow(0 -.5px .5px rgba(34, 48, 74, .15)); }
+  100% { opacity: 1; filter: drop-shadow(0 1px 0 var(--rim)) drop-shadow(0 -1px 1px var(--shade)); }
 }
-@keyframes stamp {
-  0% { opacity: 0; transform: scale(2.1); text-shadow: 0 18px 10px rgba(36, 50, 71, 0); animation-timing-function: cubic-bezier(.7, 0, 1, .6); }
-  12% { opacity: .3; }
-  40% { opacity: 1; transform: scale(1); text-shadow: 0 0 7px rgba(36, 50, 71, .35); animation-timing-function: ease-out; }
-  52% { transform: scale(.93); text-shadow: 0 0 2px rgba(36, 50, 71, .25); }
-  66% { transform: scale(1); text-shadow: 0 0 0 rgba(36, 50, 71, 0); opacity: 1; }
-  100% { transform: scale(1); opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) { .g.land, .stamp { animation: none; } }
+/* A deleted print fills back in with snow. */
+.ghost { position: absolute; white-space: pre; animation: fill .22s ease-in both; }
+@keyframes fill { to { opacity: 0; filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0)) drop-shadow(0 0 0 rgba(34, 48, 74, 0)); } }
+@media (prefers-reduced-motion: reduce) { .g.land { animation: none; } .ghost { display: none; } }
 </style>
 </head>
 <body data-view="write" data-edition="original">
@@ -132,55 +134,55 @@ body::before {
   editor.addEventListener('scroll', () => { layer.scrollTop = editor.scrollTop; });
 
   let shown = '';
-  function render(animateFrom = -1, animateTo = -1) {
+  function render(sinkFrom = -1, sinkTo = -1) {
     const glyphs = Array.from(editor.value);
     const fragment = document.createDocumentFragment();
-    const landed = [];
     glyphs.forEach((glyph, index) => {
       const span = document.createElement('span');
       span.className = 'g';
       span.textContent = glyph;
-      if (index >= animateFrom && index < animateTo && glyph.trim()) {
-        span.classList.add('land');
-        landed.push(span);
-      }
+      if (index >= sinkFrom && index < sinkTo && glyph.trim()) span.classList.add('land');
       fragment.append(span);
     });
     layer.replaceChildren(fragment);
     layer.scrollTop = editor.scrollTop;
-    const layerRect = layer.getBoundingClientRect();
-    for (const span of landed) stamp(span, layerRect);
     shown = editor.value;
     document.getElementById('word-count').textContent = glyphs.length + '자';
     for (const word of document.querySelectorAll('[data-prompt-word]')) word.dataset.used = String(editor.value.includes(word.textContent));
   }
 
-  // The seal is a copy of the glyph at its exact spot, coming straight down onto it.
-  function stamp(span, layerRect) {
-    const rect = span.getBoundingClientRect();
-    const seal = document.createElement('span');
-    seal.className = 'stamp';
-    seal.textContent = span.textContent;
-    seal.style.left = rect.left - layerRect.left + 'px';
-    seal.style.top = rect.top - layerRect.top + 'px';
-    fx.append(seal);
-    // A hidden tab pauses animations, so a timer cleans up rather than animationend.
-    setTimeout(() => seal.remove(), 450);
+  // Prints that are deleted fill back in where they were.
+  function fillIn(from, to) {
+    const spans = Array.from(layer.children).slice(from, to);
+    const layerRect = layer.getBoundingClientRect();
+    for (const span of spans) {
+      if (!span.textContent.trim()) continue;
+      const rect = span.getBoundingClientRect();
+      const ghost = document.createElement('span');
+      ghost.className = 'ghost';
+      ghost.textContent = span.textContent;
+      ghost.style.left = rect.left - layerRect.left + 'px';
+      ghost.style.top = rect.top - layerRect.top + 'px';
+      fx.append(ghost);
+      // A hidden tab pauses animations, so a timer cleans up rather than animationend.
+      setTimeout(() => ghost.remove(), 350);
+    }
   }
 
-  // Only the changed stretch lands: common prefix and suffix stay as they are.
+  // Only the changed stretch sinks: common prefix and suffix stay as they are.
   function changedRange(before, after) {
     const a = Array.from(before), b = Array.from(after);
     let start = 0;
     while (start < a.length && start < b.length && a[start] === b[start]) start++;
     let endA = a.length, endB = b.length;
     while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) { endA--; endB--; }
-    return [start, endB];
+    return [start, endA, endB];
   }
 
   editor.addEventListener('input', () => {
-    const [from, to] = changedRange(shown, editor.value);
-    render(from, to);
+    const [start, oldEnd, newEnd] = changedRange(shown, editor.value);
+    if (oldEnd > start) fillIn(start, oldEnd);
+    render(start, newEnd);
   });
 
   fit();
