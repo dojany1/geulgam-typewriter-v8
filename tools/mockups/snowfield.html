@@ -3,53 +3,57 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>시안 A3 · 흰 도화지에 검은 글자가 찍힌다</title>
+<title>시안 A4 · 눈밭에 도장처럼 찍힌다</title>
 <link rel="stylesheet" href="/dist/common.css">
 <link rel="stylesheet" href="/dist/styles.css">
 <style>
-/* The live basic-mode layout on a sheet of white paper. Every letter is a black
-   print stamped into the snow, and every stamp crunches. Always light. */
-:root[data-theme="light"] { --bg: #fbfbf9; --fg: #111; --line: #d9d9d4; }
+/* The live basic-mode layout on the snowfield from the first mockup: sky fading
+   into snow, ink the colour of shadow on snow. Each letter comes straight down
+   onto the surface like a seal and stays pressed in. No sound. */
+:root[data-theme="light"] { --bg: #f8fafc; --fg: #243247; --muted: #7383a0; --line: #d3dbe6; --accent: #ff5224; }
+:root { --sky: #e4ebf3; --snow: #f8fafc; --ink: #243247; }
+body { background: linear-gradient(var(--sky), var(--snow) 42%) fixed; }
 body::before {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background: url("/dist/assets/grain.png"); opacity: .16; mix-blend-mode: multiply;
+  background: url("/dist/assets/grain.png"); opacity: .14; mix-blend-mode: multiply;
 }
 .topnav, .workspace { position: relative; z-index: 1; }
-.writing-area { position: relative; }
-#words { color: #8a8a86; }
+.writing-area { position: relative; border-top-color: #cfd8e3; }
+#words { color: var(--muted); }
 [data-prompt-word][data-used="true"]::after { visibility: visible; }
-#editor { color: transparent; -webkit-text-fill-color: transparent; caret-color: #111; position: relative; z-index: 2; }
-#editor::placeholder { -webkit-text-fill-color: #a3a39e; }
+#editor { color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--ink); position: relative; z-index: 2; }
+#editor::placeholder { -webkit-text-fill-color: #9aa7bb; }
 .snow-layer, .snow-fx { position: absolute; left: 0; right: 0; pointer-events: none; overflow: hidden; }
-.snow-layer {
-  z-index: 1; white-space: pre-wrap; overflow-wrap: anywhere; color: #111;
-  font: 400 23px/var(--writing-line-height) var(--text-font); letter-spacing: -.35px;
+.snow-layer, .snow-fx { font: 400 23px/var(--writing-line-height) var(--text-font); letter-spacing: -.35px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.snow-layer { z-index: 1; color: var(--ink); }
+.snow-fx { z-index: 3; }
+/* A pressed letter: a hair of light below, a hair of shadow above. */
+.g { position: relative; text-shadow: 0 1px 0 rgba(255, 255, 255, .95), 0 -1px 1px rgba(36, 50, 71, .22); }
+/* The real glyph stays out of sight until the seal touches down (40% of the stamp). */
+.g.land { animation: appear .32s linear both; }
+@keyframes appear {
+  0%, 39% { color: transparent; text-shadow: none; }
+  40%, 100% { color: var(--ink); text-shadow: 0 1px 0 rgba(255, 255, 255, .95), 0 -1px 1px rgba(36, 50, 71, .22); }
 }
-.snow-fx { z-index: 3; font: 400 23px/var(--writing-line-height) var(--text-font); letter-spacing: -.35px; }
-.g { position: relative; }
-.g.land { animation: stamp .24s cubic-bezier(.25, .9, .3, 1) both; }
+/* The seal: the letter's own shape, large and faint while it is still in the air,
+   dropping straight down, touching at 40%, pressing in, then handing over. */
+.stamp {
+  position: absolute; color: var(--ink); white-space: pre; transform-origin: 50% 62%;
+  animation: stamp .32s linear both;
+}
 @keyframes stamp {
-  0% { top: -4px; color: rgba(17, 17, 17, .08); }
-  55% { top: 1px; color: #111; }
-  100% { top: 0; }
+  0% { opacity: 0; transform: scale(2.1); text-shadow: 0 18px 10px rgba(36, 50, 71, 0); animation-timing-function: cubic-bezier(.7, 0, 1, .6); }
+  12% { opacity: .3; }
+  40% { opacity: 1; transform: scale(1); text-shadow: 0 0 7px rgba(36, 50, 71, .35); animation-timing-function: ease-out; }
+  52% { transform: scale(.93); text-shadow: 0 0 2px rgba(36, 50, 71, .25); }
+  66% { transform: scale(1); text-shadow: 0 0 0 rgba(36, 50, 71, 0); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
 }
-/* The print itself: a soft copy of the glyph that spreads and settles, like snow giving under a foot. */
-.print {
-  position: absolute; color: rgba(0, 0, 0, .55); filter: blur(2.5px); white-space: pre;
-  transform-origin: 50% 70%; animation: print .55s cubic-bezier(.2, .8, .3, 1) both;
-}
-@keyframes print {
-  0% { opacity: 0; transform: scale(1.25); }
-  30% { opacity: .9; transform: scale(1.02); }
-  100% { opacity: 0; transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) { .g.land, .print { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .g.land, .stamp { animation: none; } }
 </style>
 </head>
 <body data-view="write" data-edition="original">
   <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <symbol id="vol" viewBox="0 0 24 24"><path d="m11.8 4-6 4.8H2.5v6.4h3.3l6 4.8Z" fill="currentColor" stroke="none"/><path d="M15.1 8.5a4.6 4.6 0 0 1 0 7m3-10a8.8 8.8 0 0 1 0 13"/></symbol>
-    <symbol id="quiet" viewBox="0 0 24 24"><path d="m11.8 4-6 4.8H2.5v6.4h3.3l6 4.8Z" fill="currentColor" stroke="none"/><path d="m15.5 9 6 6m0-6-6 6"/></symbol>
     <symbol id="gear" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M10 1h4l.7 3 1.7.8L19 3.3l2.7 2.8-1.5 2.6.8 1.7 3 .7v3.6l-3 .7-.8 1.7 1.5 2.6-2.8 2.7-2.6-1.5-1.7.8-.7 2.7h-3.8l-.7-2.7-1.7-.8-2.6 1.5-2.8-2.7 1.5-2.6-.8-1.7-2.7-.7v-3.6l2.7-.7.8-1.7L2.1 6.1l2.8-2.8 2.6 1.5 1.7-.8L10 1Zm2 7.5a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/></symbol>
     <symbol id="reset" viewBox="0 0 24 24"><path d="M8 6.5A7.5 7.5 0 1 1 5 13M9.3 2.8 6 6.5l3.9 2.8"/></symbol>
     <symbol id="next" viewBox="0 0 24 24"><path d="m9.2 5.4 6.5 6.6-6.5 6.6"/></symbol>
@@ -63,7 +67,6 @@ body::before {
   <header class="topnav column">
     <a class="logotype" href="./" aria-label="GULGAM 글쓰기 홈" lang="en">gul<strong>gam</strong></a>
     <nav class="nav-links" aria-label="주 메뉴">
-      <button type="button" id="sound" aria-label="뽀드득 소리" title="뽀드득 소리" aria-pressed="true" class="icon sound-toggle"><svg class="sound-on"><use href="#vol"/></svg><svg class="sound-off"><use href="#quiet"/></svg></button>
       <button type="button" class="nav-reroll">글감 뽑기</button>
       <a href="#" class="edition-link">타자기 버전</a>
       <button type="button" class="nav-settings">설정</button>
@@ -146,23 +149,23 @@ body::before {
     layer.replaceChildren(fragment);
     layer.scrollTop = editor.scrollTop;
     const layerRect = layer.getBoundingClientRect();
-    for (const span of landed) print(span, layerRect);
+    for (const span of landed) stamp(span, layerRect);
     shown = editor.value;
     document.getElementById('word-count').textContent = glyphs.length + '자';
     for (const word of document.querySelectorAll('[data-prompt-word]')) word.dataset.used = String(editor.value.includes(word.textContent));
   }
 
-  // The print is the glyph's own shape: a blurred copy that spreads and settles under it.
-  function print(span, layerRect) {
+  // The seal is a copy of the glyph at its exact spot, coming straight down onto it.
+  function stamp(span, layerRect) {
     const rect = span.getBoundingClientRect();
-    const copy = document.createElement('span');
-    copy.className = 'print';
-    copy.textContent = span.textContent;
-    copy.style.left = rect.left - layerRect.left + 'px';
-    copy.style.top = rect.top - layerRect.top + 'px';
-    fx.append(copy);
+    const seal = document.createElement('span');
+    seal.className = 'stamp';
+    seal.textContent = span.textContent;
+    seal.style.left = rect.left - layerRect.left + 'px';
+    seal.style.top = rect.top - layerRect.top + 'px';
+    fx.append(seal);
     // A hidden tab pauses animations, so a timer cleans up rather than animationend.
-    setTimeout(() => copy.remove(), 700);
+    setTimeout(() => seal.remove(), 450);
   }
 
   // Only the changed stretch lands: common prefix and suffix stay as they are.
@@ -175,67 +178,8 @@ body::before {
     return [start, endB];
   }
 
-  // 뽀드득: snow does not click, it crumbles. A step is a cluster of tiny
-  // crackles, dense at first and thinning out, over a soft give underneath.
-  let audio, noise;
-  const master = .5;
-  function ensureAudio() {
-    if (!soundOn()) return false;
-    if (!audio) {
-      audio = new (window.AudioContext || window.webkitAudioContext)();
-      noise = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
-      const data = noise.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-    }
-    if (audio.state === 'suspended') audio.resume().catch(() => null);
-    return true;
-  }
-  function grain(at, type, frequency, q, attack, length, strength) {
-    const source = audio.createBufferSource();
-    source.buffer = noise;
-    const filter = audio.createBiquadFilter();
-    filter.type = type; filter.frequency.value = frequency; filter.Q.value = q;
-    const gain = audio.createGain();
-    gain.gain.setValueAtTime(.0001, at);
-    gain.gain.exponentialRampToValueAtTime(strength * master, at + attack);
-    gain.gain.exponentialRampToValueAtTime(.0001, at + attack + length);
-    source.connect(filter).connect(gain).connect(audio.destination);
-    source.start(at, Math.random() * .7, attack + length + .01);
-  }
-  function step(at, weight, span) {
-    const crackles = Math.round(14 * weight + Math.random() * 6);
-    for (let i = 0; i < crackles; i++) {
-      const t = at + Math.pow(Math.random(), 1.7) * span;
-      const fade = 1 - (t - at) / span * .6;
-      grain(t, 'bandpass', 2600 + Math.random() * 4200, 6, .002, .006 + Math.random() * .014, .42 * weight * fade);
-    }
-    grain(at, 'lowpass', 420 + Math.random() * 120, .7, .018, span * .9, .2 * weight);
-    grain(at + span * .3, 'bandpass', 1200, 1.2, .01, span * .5, .09 * weight);
-  }
-  function crunch(kind) {
-    if (!ensureAudio()) return;
-    const at = audio.currentTime + .004;
-    const vary = .85 + Math.random() * .3;
-    if (kind === 'delete') { step(at, .45 * vary, .07); return; }
-    if (kind === 'return') { step(at, 1.05, .14); step(at + .13, .9, .13); return; }
-    if (kind === 'space') { step(at, 1.2 * vary, .16); return; }
-    step(at, vary, .1);
-  }
-
-  const soundButton = document.getElementById('sound');
-  const soundOn = () => soundButton.getAttribute('aria-pressed') === 'true';
-  soundButton.addEventListener('click', () => {
-    soundButton.setAttribute('aria-pressed', String(!soundOn()));
-    if (soundOn()) crunch('key');
-  });
-
-  editor.addEventListener('input', event => {
+  editor.addEventListener('input', () => {
     const [from, to] = changedRange(shown, editor.value);
-    const type = event.inputType || '';
-    if (type.startsWith('delete')) crunch('delete');
-    else if (type === 'insertLineBreak' || type === 'insertParagraph') crunch('return');
-    else if (event.data === ' ') crunch('space');
-    else if (to > from) crunch('key');
     render(from, to);
   });
 
